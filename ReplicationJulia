@@ -26,15 +26,11 @@ mutable struct Individual
   moves
   alwaysC::Bool
   alwaysD::Bool
-  function Individual (self, strat, pay)
+  function Individual (strat, pay)
     if(strat=="rand")
-      self.strategy=strategies[iround(rand()*(STRATSSIZE-1))]
+      new(strategies[iround(rand()*(STRATSSIZE-1))],pay,[],false,false)
     else
-      self.strategy=strat
+      new(strat,pay,[],false,false)
     end
-    self.payoff=pay
-    self.moves=[]
-    self.alwaysC=false
-    self.alwaysD=false
   end
 end
