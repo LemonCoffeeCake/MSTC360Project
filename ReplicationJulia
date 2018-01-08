@@ -1,0 +1,40 @@
+import Dates
+
+start=Dates.now();
+
+C=1
+B=4
+
+population=Individual[]
+populationsize=15
+numberoftimesteps=4000
+currtimestep=0
+mutationrate=0.001
+iterations=50
+
+strategies=["ALLC", "ALLD", "TIT4TAT", "CAUTIOUSTIT", "ALTERNATE", "RANDOM"]
+STRATSSIZE=6
+
+pb=1
+pn=0.85
+pr=0.017
+relationships=zeros(populationsize,populationsize)
+
+mutable struct Individual
+  strategy::String
+  payoff::Int
+  moves
+  alwaysC::Bool
+  alwaysD::Bool
+  function Individual (self, strat, pay)
+    if(strat=="rand")
+      self.strategy=strategies[iround(rand()*(STRATSSIZE-1))]
+    else
+      self.strategy=strat
+    end
+    self.payoff=pay
+    self.moves=[]
+    self.alwaysC=false
+    self.alwaysD=false
+  end
+end
