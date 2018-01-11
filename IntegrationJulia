@@ -1,0 +1,340 @@
+import Dates
+Pkg.add("PyPlot")
+
+C=1
+B=4
+
+starttime=now()
+
+population=Individual[]
+populationsize=100
+numberoftimesteps=2000
+currtimestep=0
+mutationrate=0.001
+iterations=50
+
+strategies=["ALLC", "ALLD", "TIT4TAT", "CAUTIOUSTIT", "ALTERNATE", "RANDOM"]
+STRATSSIZE=6
+
+data=zeros(STRATSSIZE, numberoftimesteps)
+
+simulationruns=5
+degreedistributiondata=zeros(simulationruns, populationsize)
+clusteringcoefdata=zeros(500,populationsize+1)
+howmanydie=10
+
+pb=1
+pn=0.85
+pr=0.017
+relationships=zeros(Integer,populationsize,populationsize)
+
+mutable struct Individual
+  strategy::String
+  payoff::Int
+  moves
+  alwaysC::Bool
+  alwaysD::Bool
+  index
+  function Individual (strat, pay, ind)
+    if(strat=="rand")
+      new(strategies[floor(Integer,(rand()*(STRATSSIZE-1))],pay,[],false,false,ind)
+    else
+      new(strat,pay,[],false,false,ind)
+    end
+  end
+end
+
+function computemove (self::Individual, opponent::Individual, iter::Integer)
+  if(self.alwaysD==true)
+    return "D"
+  end
+  if(self.alwaysC==true)
+    return "C"
+  end
+
+  out="C"
+
+  if(self.strategy=="ALLD")
+    self.alwaysD=true
+    out="D"
+  end
+
+  if(self.strategy=="ALLC")
+    self.alwaysC=true
+  end
+
+  if(self.strategy=="TIT4TAT") #The Tit For Tat strategy starts by cooperating then repeats the opponent's previous move
+    if(iter>0)
+      out=opponent.moves[iter-1]
+  end
+
+  if(self.strategy=="CAUTIOUSTIT")#Same as Tit for Tat, but starts by defecting
+    out="D"
+    if(iter>0)
+      out=opponent.moves[iter-1]
+  end
+
+  if(self.strategy=="ALTERNATE")
+    if(iter>0)
+      if(self.moves[iter-1]=="C")
+        out=="D"
+  end
+
+  if(self.strategy=="RANDOM")
+    if(rand()>0.5)
+      out=="D"
+  end
+  return out
+end
+function addtopayoff(self::Individual, gamepay::Integer)
+  self.payoff+=gamepay
+end
+function mutate(self::Individual)
+  self.strategy=strategies[floor(Integer,(rand()*(STRATSSIZE-1))]
+end
+function findfitness(self::Individual)
+  return self.payoff
+end
+function clearmoves(self::Individual)
+  if(length(self.moves)==iterations)
+    for i=1:iterations
+      self.moves[i]="None"
+  else
+    for i=1:iterations
+      push!(self.moves, "None")
+  end
+end
+
+function initsim()
+  population=[]
+  relationships=zeros(Integer,populationsize,populationsize)
+  for i=1:(populationsize)
+    guy=Individual("rand",0,i)
+    clearmoves(guy)
+    push!(population, guy)
+  end
+  for i=1:populationsize,j=i:populationsize
+    if(j!=i)
+      if(rand<pr)
+        relationships[i][j]=1
+        relationships[j][i]=1
+      end
+    end
+  end
+end
+
+function runsim()
+  initsim()
+  for i=1:numberoftimesteps
+    runtimestep()
+  end
+end
+
+function getother(individual, selfindex)
+  ppl=[]
+  for i=1:populationsize
+    if(relationships[selfindex][i]==1)
+      push!(ppl,i)
+    end
+  end
+  if(rand()<0.1||length(ppl)==0)
+    otherindividual=population[floor(Integer,(rand()*populationsize))]
+    while otherindividual==individual
+      randindex=floor(Integer,(rand()*populationsize))
+      otherindividual=population[randindex]
+    end
+    return otherindividual
+  else
+    other=floor(Integer,(rand()*length(ppl))
+    while(relationships[selfindex][ppl[other]]==0)
+      other=floor(Integer,(rand()*length(ppl))
+    end
+    return population[ppl[other]]
+  end
+end
+
+function playgame(ind1, ind2)
+  if(currtimestep!=0)
+    clearmoves(ind1)
+    clearmoves(ind2)
+  end
+  payoff2=0
+  for i=1:iterations
+    move1=computemove(ind1,ind2,i)
+    move2=computemove(ind2,ind1,i)
+    ind1.moves[i]=move1
+    ind2.moves[i]=move2
+    if(move1=="C")
+      if(move2=="C")
+        addtopayoff(ind1,b-c)
+        payoff2+=(b-c)
+      else
+        addtopayoff(ind1,-c)
+        payoff2+=b
+      end
+    else
+      if(move2=="C")
+        addtopayoff(ind1,b)
+        payoff2-=c
+      else
+        addtopayoff(ind1,-c)
+        payoff2-=c
+      end
+    end
+    #add the relationship breaker here (if both payoffs are below -50)
+  end
+end
+
+function whodies()
+  deaths=[]
+  min=1000
+  for i=1:populationsize
+    if(population[i].payoff<min)
+      min=population[i].payoff
+  end
+  while length(deaths)<howmanydie
+    index=floor(Integer,(rand()*populationsize))
+    person=population[index]
+    already=false
+    for i in eachindex(deaths)
+      if(deaths[i]==person)
+        already==true
+    end
+    difference=person.payoff-min
+    if(already!=true&&diference<=20)
+      push!(deaths,index)
+    end
+  end
+  return deaths
+end
+
+function whoreproduces()
+  moms=[]
+  max=-50
+  for i=1:populationsize
+    if(population[i].payoff>max)
+      max=population[i].payoff
+    end
+  end
+  while(length(moms)<howmanydie)
+    index=floor(Integer,(rand()*populationsize))+1
+    person=population[index]
+    already=false
+    for i=1:length(moms)
+      if(moms[i]==person)
+        already=true
+    end
+    difference=max-person.payoff
+    if(already!=true&&difference<=20)
+      push!(moms, index)
+    end
+  end
+  return moms
+end
+
+function games()
+  for i=1:populationsize
+    println(i)
+    currindividual=population[i]
+    otherindividual=getother(currindividual,i)
+    playgame(currindividual,otherindividual)
+  end
+end
+
+function selection()
+  deadppl=whodies()
+  mothers=whoreproduces()
+  for i in eachindex(deadppl)
+    population[deadppl[i]]=Individual(population[mothers[i]].strategy,0,deadppl[i])
+    for j=1:populationsize
+      relationships[deadppl[i]][j]=0
+      relationships[j][deadppl[i]]=0
+    end
+    if(deadppl[i]!=mothers[i]&&rand()<pb)
+      relationships[deadppl[i]][mothers[i]]=1
+      relationships[mothers[i]][deadppl[i]]=1
+    end
+    for j=1:populationsize
+      if(deadppl[i]!=j&&relationships[mothers[i]][j]==1&&rand()<=pn)
+        relationships[deadppl[i]][j]=1
+        relationships[j][deadppl[i]]=1
+      end
+      if(deadppl[i]!=j&&rand()<pr)
+        relationships[deadppl[i]][j]=1
+        relationships[j][deadppl[i]]=1
+      end
+    end
+  end
+  for i=1:populationsize
+    population[i].payoff=0
+    population[i].alwaysD=false
+    population[i].alwaysC=false
+  end
+end
+
+function mutation
+  for i=1:populationsize
+    if(rand()<mutationrate)
+      currindividual=population[i]
+      mutate(currindividual)
+    end
+  end
+end
+
+function getnumwithstrat(strat)
+  count=0
+  for i=1:populationsize
+    if(population[i].strategy==strat)
+      count+=1
+    end
+  end
+  return count
+end
+
+function runtimestep()
+  games()
+  selection()
+  mutation()
+  for i=1:STRATSSIZE
+    data[i][currtimestep]=getnumwithstrat(strategies[i])
+  end
+  currtimestep+=1
+end
+
+for k=1:simulationruns
+  strt=now()
+  currtimestep=0
+  runsim()
+
+  degreedistribution=zeros(populationsize)
+  clusco=zeros(populationsize+1)
+
+  #graph assignment
+
+  #use graph to make degree array
+  #use graph to make cc array
+
+  #for-loop over population
+    #add 1 to the right spots in the degree array
+    #add 1 to the right spots in the cc array
+  #end
+    popleft=populationsize
+  for i=1:populationsize
+    popleft-=degreedistribution[i]
+    degreedistribution[i]=popleft/populationsize
+  end
+  popleft=populationsize
+  for i=1:length(clusteringcoefdata[0])
+    popleft-=clusco[i]
+    clusco[i]=popleft/populationsize
+    end
+
+  degreedistributiondata[k]=degreedistribution
+  clusteringcoefdata[k]=clusco
+
+  println(now()-strt)
+end
+
+#lots and lots of graphing stuff
+
+println(now()-starttime)

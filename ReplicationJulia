@@ -1,6 +1,7 @@
 import Dates
+Pkg.add("PyPlot")
 
-start=Dates.now();
+start=now();
 
 C=1
 B=4
@@ -18,7 +19,7 @@ STRATSSIZE=6
 pb=1
 pn=0.85
 pr=0.017
-relationships=zeros(populationsize,populationsize)
+relationships=zeros(Integer,populationsize,populationsize)
 
 mutable struct Individual
   strategy::String
@@ -28,9 +29,149 @@ mutable struct Individual
   alwaysD::Bool
   function Individual (strat, pay)
     if(strat=="rand")
-      new(strategies[iround(rand()*(STRATSSIZE-1))],pay,[],false,false)
+      new(strategies[floor(Integer,(rand()*(STRATSSIZE-1))],pay,[],false,false)
     else
       new(strat,pay,[],false,false)
     end
   end
 end
+
+function computemove (self::Individual, opponent::Individual, iter::Integer)
+  if(self.alwaysD==true)
+    return "D"
+  end
+  if(self.alwaysC==true)
+    return "C"
+  end
+
+  out="C"
+
+  if(self.strategy=="ALLD")
+    self.alwaysD=true
+    out="D"
+  end
+
+  if(self.strategy=="ALLC")
+    self.alwaysC=true
+  end
+
+  if(self.strategy=="TIT4TAT") #The Tit For Tat strategy starts by cooperating then repeats the opponent's previous move
+    if(iter>0)
+      out=opponent.moves[iter-1]
+  end
+
+  if(self.strategy=="CAUTIOUSTIT")#Same as Tit for Tat, but starts by defecting
+    out="D"
+    if(iter>0)
+      out=opponent.moves[iter-1]
+  end
+
+  if(self.strategy=="ALTERNATE")
+    if(iter>0)
+      if(self.moves[iter-1]=="C")
+        out=="D"
+  end
+
+  if(self.strategy=="RANDOM")
+    if(rand()>0.5)
+      out=="D"
+  end
+  return out
+end
+function addtopayoff(self::Individual, gamepay::Integer)
+  self.payoff+=gamepay
+end
+function mutate(self::Individual)
+  self.strategy=strategies[floor(Integer,(rand()*(STRATSSIZE-1))]
+end
+function findfitness(self::Individual)
+  return self.payoff
+end
+function clearmoves(self::Individual)
+  if(length(self.moves)==iterations)
+    for i=1:iterations
+      self.moves[i]="None"
+  else
+    for i=1:iterations
+      push!(self.moves, "None")
+  end
+end
+
+function initsim()
+  relationships=zeros(Integer,populationsize,populationsize)
+  for i=1:populationsize
+    guy=Individual("rand",0)
+    clearmoves(guy)
+    push!(population, guy)
+  end
+  for i=1:populationsize,j=i:populationsize
+    if(j!=i)
+      if(rand<pr)
+        relationships[i][j]=1
+        relationships[j][i]=1
+      end
+    end
+  end
+end
+
+function generationrun()
+  death=floor(Integer,(rand()*populationsize)
+  mother=floor(Integer,(rand()*populationsize)
+  while mother==death
+    mother=floor(Integer,(rand()*populationsize)
+  end
+  offspring=Individual("rand",0)
+  relationships[:, death]=0
+  relationships[death, :]=0
+  for i=1:populationsize
+    relationships[death][i]=0
+    if(relationships[mother][i]==1 && i!=death && rand()<pn)
+      relationships[death][i]=1
+      relationships[i][death]=1
+    end
+    if(i!=death && relationships[mother][i]==0 && rand()<pr)
+      relationships[death][i]=1
+      relationships[i][death]=1
+    end
+    if(i==mother && rand()<pb)
+      relationships[death][i]=1
+      relationships[i][death]=1
+    end
+  end
+  population[death]=offspring
+end
+
+simruns=500
+degreedistributiondata=zeros(500, populationsize)
+clusteringcoefdata=zeros(500,populationsize+1)
+
+for j=1:simruns
+  initsim()
+  for i=1:numberoftimesteps
+    generationrun()
+  end
+  degrees=zeros(populationsize) #number of individuals with any degree
+  clusco=zeros(populationsize+1) #number of individuals w. any cc
+
+  #graph assignment goes here once I figure that out
+
+  #make an array of each individual's degree using the graph
+  #make an array of each individual's clustering coefficient using the graph
+
+  #for-loop over entire population size
+    #add 1 to the appropriate spot in the degrees and cc array
+  #end
+  popleft=populationSize
+  for i in eachindex(degreedistributiondata[0])
+    popleft-=degrees[i]
+    degrees[i]=popleft/populationsize
+  end
+  popleft=populationsize
+  for i in eachindex(clusteringcoefdata[0])
+    popleft-=clusco[i]
+    clusco[i]=popleft/populationsize
+  end
+  degreedistributiondata[j]=degrees
+  clusteringcoefdata[j]=clusco
+
+#graphing stuff
