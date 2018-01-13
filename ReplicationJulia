@@ -1,5 +1,4 @@
-import Dates
-Pkg.add("PyPlot")
+import PyPlot
 
 start=now();
 
@@ -22,21 +21,21 @@ pr=0.017
 relationships=zeros(Integer,populationsize,populationsize)
 
 mutable struct Individual
-  strategy::String
-  payoff::Int
-  moves
-  alwaysC::Bool
-  alwaysD::Bool
-  function Individual (strat, pay)
-    if(strat=="rand")
-      new(strategies[floor(Integer,(rand()*(STRATSSIZE-1))],pay,[],false,false)
-    else
-      new(strat,pay,[],false,false)
+    strategy::String
+    payoff::Int
+    moves
+    alwaysC::Bool
+    alwaysD::Bool
+    function Individual(strat, pay)
+        if(strat=="rand")
+            new(strategies[ceil(Integer,(rand()*(STRATSSIZE)))],pay,[],false,false)
+        else
+            new(strat,pay,[],false,false)
+        end
     end
-  end
 end
 
-function computemove (self::Individual, opponent::Individual, iter::Integer)
+function computemove(self, opponent, iter)
   if(self.alwaysD==true)
     return "D"
   end
@@ -56,33 +55,39 @@ function computemove (self::Individual, opponent::Individual, iter::Integer)
   end
 
   if(self.strategy=="TIT4TAT") #The Tit For Tat strategy starts by cooperating then repeats the opponent's previous move
-    if(iter>0)
+    if(iter>1)
       out=opponent.moves[iter-1]
+    end
   end
 
   if(self.strategy=="CAUTIOUSTIT")#Same as Tit for Tat, but starts by defecting
     out="D"
-    if(iter>0)
+    if(iter>1)
       out=opponent.moves[iter-1]
+    end
   end
 
   if(self.strategy=="ALTERNATE")
-    if(iter>0)
+    if(iter>1)
       if(self.moves[iter-1]=="C")
         out=="D"
+      end
+    end
   end
 
   if(self.strategy=="RANDOM")
     if(rand()>0.5)
       out=="D"
+    end
   end
   return out
 end
+
 function addtopayoff(self::Individual, gamepay::Integer)
   self.payoff+=gamepay
 end
 function mutate(self::Individual)
-  self.strategy=strategies[floor(Integer,(rand()*(STRATSSIZE-1))]
+  self.strategy=strategies[floor(Integer,(rand()*(STRATSSIZE)+1))]
 end
 function findfitness(self::Individual)
   return self.payoff
@@ -91,9 +96,14 @@ function clearmoves(self::Individual)
   if(length(self.moves)==iterations)
     for i=1:iterations
       self.moves[i]="None"
+    end
   else
-    for i=1:iterations
-      push!(self.moves, "None")
+    for i=1:length(self.moves)
+      self.moves[i]="None"
+    end
+    for i=1:(iterations-length(self.moves))
+        push!(self.moves,"None")
+    end
   end
 end
 
@@ -106,36 +116,36 @@ function initsim()
   end
   for i=1:populationsize,j=i:populationsize
     if(j!=i)
-      if(rand<pr)
-        relationships[i][j]=1
-        relationships[j][i]=1
+      if(rand()<pr)
+        relationships[i,j]=1
+        relationships[j,i]=1
       end
     end
   end
 end
 
 function generationrun()
-  death=floor(Integer,(rand()*populationsize)
-  mother=floor(Integer,(rand()*populationsize)
+  death=ceil(Integer,(rand()*populationsize))
+  mother=ceil(Integer,(rand()*populationsize))
   while mother==death
-    mother=floor(Integer,(rand()*populationsize)
+    mother=ceil(Integer,(rand()*populationsize))
   end
   offspring=Individual("rand",0)
   relationships[:, death]=0
   relationships[death, :]=0
   for i=1:populationsize
-    relationships[death][i]=0
-    if(relationships[mother][i]==1 && i!=death && rand()<pn)
-      relationships[death][i]=1
-      relationships[i][death]=1
+    relationships[death,i]=0
+    if(relationships[mother,i]==1 && i!=death && rand()<pn)
+      relationships[death,i]=1
+      relationships[i,death]=1
     end
-    if(i!=death && relationships[mother][i]==0 && rand()<pr)
-      relationships[death][i]=1
-      relationships[i][death]=1
+    if(i!=death && relationships[mother,i]==0 && rand()<pr)
+      relationships[death,i]=1
+      relationships[i,death]=1
     end
     if(i==mother && rand()<pb)
-      relationships[death][i]=1
-      relationships[i][death]=1
+      relationships[death,i]=1
+      relationships[i,death]=1
     end
   end
   population[death]=offspring
@@ -173,5 +183,7 @@ for j=1:simruns
   end
   degreedistributiondata[j]=degrees
   clusteringcoefdata[j]=clusco
+end
 
 #graphing stuff
+println(now()-start)

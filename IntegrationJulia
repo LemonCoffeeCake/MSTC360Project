@@ -1,5 +1,4 @@
-import Dates
-Pkg.add("PyPlot")
+import PyPlot
 
 C=1
 B=4
@@ -35,16 +34,16 @@ mutable struct Individual
   alwaysC::Bool
   alwaysD::Bool
   index
-  function Individual (strat, pay, ind)
+  function Individual(strat, pay, ind)
     if(strat=="rand")
-      new(strategies[floor(Integer,(rand()*(STRATSSIZE-1))],pay,[],false,false,ind)
+      new(strategies[ceil(Integer,(rand()*STRATSSIZE))],pay,[],false,false,ind)
     else
       new(strat,pay,[],false,false,ind)
     end
   end
 end
 
-function computemove (self::Individual, opponent::Individual, iter::Integer)
+function computemove(self::Individual, opponent::Individual, iter::Integer)
   if(self.alwaysD==true)
     return "D"
   end
@@ -64,18 +63,18 @@ function computemove (self::Individual, opponent::Individual, iter::Integer)
   end
 
   if(self.strategy=="TIT4TAT") #The Tit For Tat strategy starts by cooperating then repeats the opponent's previous move
-    if(iter>0)
+    if(iter>1)
       out=opponent.moves[iter-1]
   end
 
   if(self.strategy=="CAUTIOUSTIT")#Same as Tit for Tat, but starts by defecting
     out="D"
-    if(iter>0)
+    if(iter>1)
       out=opponent.moves[iter-1]
   end
 
   if(self.strategy=="ALTERNATE")
-    if(iter>0)
+    if(iter>1)
       if(self.moves[iter-1]=="C")
         out=="D"
   end
@@ -90,7 +89,7 @@ function addtopayoff(self::Individual, gamepay::Integer)
   self.payoff+=gamepay
 end
 function mutate(self::Individual)
-  self.strategy=strategies[floor(Integer,(rand()*(STRATSSIZE-1))]
+  self.strategy=strategies[ceil(Integer,(rand()*STRATSSIZE))]
 end
 function findfitness(self::Individual)
   return self.payoff
@@ -99,9 +98,14 @@ function clearmoves(self::Individual)
   if(length(self.moves)==iterations)
     for i=1:iterations
       self.moves[i]="None"
+    end
   else
-    for i=1:iterations
-      push!(self.moves, "None")
+    for i=1:length(self.moves)
+      self.moves[i]="None"
+    end
+    for i=1:(iterations-length(self.moves))
+        push!(self.moves,"None")
+    end
   end
 end
 
@@ -116,8 +120,8 @@ function initsim()
   for i=1:populationsize,j=i:populationsize
     if(j!=i)
       if(rand<pr)
-        relationships[i][j]=1
-        relationships[j][i]=1
+        relationships[i,j]=1
+        relationships[j,i]=1
       end
     end
   end
@@ -133,21 +137,21 @@ end
 function getother(individual, selfindex)
   ppl=[]
   for i=1:populationsize
-    if(relationships[selfindex][i]==1)
+    if(relationships[selfindex,i]==1)
       push!(ppl,i)
     end
   end
   if(rand()<0.1||length(ppl)==0)
-    otherindividual=population[floor(Integer,(rand()*populationsize))]
+    otherindividual=population[ceil(Integer,(rand()*populationsize))]
     while otherindividual==individual
-      randindex=floor(Integer,(rand()*populationsize))
+      randindex=ceil(Integer,(rand()*populationsize))
       otherindividual=population[randindex]
     end
     return otherindividual
   else
-    other=floor(Integer,(rand()*length(ppl))
+    other=ceil(Integer,(rand()*length(ppl))
     while(relationships[selfindex][ppl[other]]==0)
-      other=floor(Integer,(rand()*length(ppl))
+      other=ceil(Integer,(rand()*length(ppl))
     end
     return population[ppl[other]]
   end
@@ -193,7 +197,7 @@ function whodies()
       min=population[i].payoff
   end
   while length(deaths)<howmanydie
-    index=floor(Integer,(rand()*populationsize))
+    index=ceil(Integer,(rand()*populationsize))
     person=population[index]
     already=false
     for i in eachindex(deaths)
@@ -217,7 +221,7 @@ function whoreproduces()
     end
   end
   while(length(moms)<howmanydie)
-    index=floor(Integer,(rand()*populationsize))+1
+    index=ceil(Integer,(rand()*populationsize))
     person=population[index]
     already=false
     for i=1:length(moms)
@@ -247,21 +251,21 @@ function selection()
   for i in eachindex(deadppl)
     population[deadppl[i]]=Individual(population[mothers[i]].strategy,0,deadppl[i])
     for j=1:populationsize
-      relationships[deadppl[i]][j]=0
-      relationships[j][deadppl[i]]=0
+      relationships[deadppl[i],j]=0
+      relationships[j,deadppl[i]]=0
     end
     if(deadppl[i]!=mothers[i]&&rand()<pb)
-      relationships[deadppl[i]][mothers[i]]=1
-      relationships[mothers[i]][deadppl[i]]=1
+      relationships[deadppl[i],mothers[i]]=1
+      relationships[mothers[i],deadppl[i]]=1
     end
     for j=1:populationsize
-      if(deadppl[i]!=j&&relationships[mothers[i]][j]==1&&rand()<=pn)
-        relationships[deadppl[i]][j]=1
-        relationships[j][deadppl[i]]=1
+      if(deadppl[i]!=j&&relationships[mothers[i],j]==1&&rand()<=pn)
+        relationships[deadppl[i],j]=1
+        relationships[j,deadppl[i]]=1
       end
       if(deadppl[i]!=j&&rand()<pr)
-        relationships[deadppl[i]][j]=1
-        relationships[j][deadppl[i]]=1
+        relationships[deadppl[i],j]=1
+        relationships[j,deadppl[i]]=1
       end
     end
   end
@@ -296,7 +300,7 @@ function runtimestep()
   selection()
   mutation()
   for i=1:STRATSSIZE
-    data[i][currtimestep]=getnumwithstrat(strategies[i])
+    data[i,currtimestep]=getnumwithstrat(strategies[i])
   end
   currtimestep+=1
 end
