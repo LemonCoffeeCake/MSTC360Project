@@ -1,4 +1,6 @@
-import PyPlot
+using PyPlot
+using LightGraphs
+using StatsBase
 
 start=now();
 
@@ -156,34 +158,60 @@ degreedistributiondata=zeros(500, populationsize)
 clusteringcoefdata=zeros(500,populationsize+1)
 
 for j=1:simruns
-  initsim()
-  for i=1:numberoftimesteps
-    generationrun()
-  end
-  degrees=zeros(populationsize) #number of individuals with any degree
-  clusco=zeros(populationsize+1) #number of individuals w. any cc
+    initsim()
+    for i=1:numberoftimesteps
+        generationrun()
+    end
+    degrees=zeros(populationsize) #number of individuals with any degree
+    clusco=zeros(populationsize+1) #number of individuals w. any cc
 
-  #graph assignment goes here once I figure that out
+    g=Graph().Adjacency(relationships.tolist(),mode=1)
 
-  #make an array of each individual's degree using the graph
-  #make an array of each individual's clustering coefficient using the graph
+    deg=g.degree(np.arange(populationsize),mode=3,loops=true)
+    localcoefs=g.transitivity_local_undirected(np.arange(populationsize),mode="zero")
 
-  #for-loop over entire population size
-    #add 1 to the appropriate spot in the degrees and cc array
-  #end
-  popleft=populationSize
-  for i in eachindex(degreedistributiondata[0])
-    popleft-=degrees[i]
-    degrees[i]=popleft/populationsize
-  end
-  popleft=populationsize
-  for i in eachindex(clusteringcoefdata[0])
-    popleft-=clusco[i]
-    clusco[i]=popleft/populationsize
-  end
-  degreedistributiondata[j]=degrees
-  clusteringcoefdata[j]=clusco
+    for i=1:populationsize
+        degrees[deg[i]]+=1
+        clusco[trunc(localcoefs[i]*populationsize)]+=1
+    end
+    popleft=populationsize
+    for i in eachindex(degreedistributiondata[0])
+        popleft-=degrees[i]
+        degrees[i]=popleft/populationsize
+    end
+    popleft=populationsize
+    for i in eachindex(clusteringcoefdata[0])
+        popleft-=clusco[i]
+        clusco[i]=popleft/populationsize
+    end
+    degreedistributiondata[j]=degrees
+    clusteringcoefdata[j]=clusco
 end
 
-#graphing stuff
+xaxisdd=arange(0,length(degreedistributiondata[0]),1)
+xaxiscc=arange(0,1,1/(populationsize+1))
+
+fig,ax=subplots(nrows=2,squeeze=false)
+avgdegdist=mean(degreedistributiondata,axis=0)
+meddegdist=median(degreedistributiondata,axis=0)
+ddhigh475=percentile(degreedistributiondata,97.5,axis=0)
+ddlow475=percentile(degreedistributiondata,2.5,axis=0)
+
+avgcc=mean(clusteringcoefdata,axis=0)
+cchigh475=percentile(clusteringcoefdata,97.5,axis=0)
+cclow475=percentile(clusteringcoefdata,2.5,axis=0)
+
+ax[0,0].set_xlim([0,32])
+ax[0,0].plot(xaxisdd,avgdegdist,color='black')
+ax[0,0].plot(xaxisdd,meddegdist,color="green")
+ax[0,0].fill_between(x=xaxisdd,y1=avgdegdist,y2=ddhigh475,color='blue')
+ax[0,0].fill_between(x=xaxisdd,y1=avgdegdist,y2=ddlow475,color='blue')
+
+ax[1,0].set_ylim([0,1])
+ax[1,0].plot(xaxiscc,avgcc,color='red')
+ax[1,0].fill_between(x=xaxiscc,y1=avgcc,y2=cchigh475,color='#FF6666')
+ax[1,0].fill_between(x=xaxiscc,y1=avgcc,y2=cclow475,color='#FF6666')
+
 println(now()-start)
+
+show()

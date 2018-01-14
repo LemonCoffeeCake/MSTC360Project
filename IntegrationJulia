@@ -1,4 +1,6 @@
-import PyPlot
+using PyPlot
+using LightGraphs
+using StatsBase
 
 C=1
 B=4
@@ -313,16 +315,16 @@ for k=1:simulationruns
   degreedistribution=zeros(populationsize)
   clusco=zeros(populationsize+1)
 
-  #graph assignment
+  g=Graph().Adjacency(relationships,mode=1)
 
-  #use graph to make degree array
-  #use graph to make cc array
+  howmanyconnections=g.degree(list(range(populationsize)),mode=3,loops=true)
+  localcoefs=g.transitivity_local_undirected(list(range(populationsize)),mode="zero")
 
-  #for-loop over population
-    #add 1 to the right spots in the degree array
-    #add 1 to the right spots in the cc array
-  #end
-    popleft=populationsize
+  for i=1:populationsize
+    degreedistribution[howmanyconnections[i]]+=1
+    clusco[trunc(localcoefs[i]*67)]+=1
+end
+  popleft=populationsize
   for i=1:populationsize
     popleft-=degreedistribution[i]
     degreedistribution[i]=popleft/populationsize
@@ -339,6 +341,30 @@ for k=1:simulationruns
   println(now()-strt)
 end
 
-#lots and lots of graphing stuff
+xaxisdd=arange(0,length(degreedistributiondata[0]),1)
+xaxiscc=arange(0,1,1/(populationsize+1))
 
-println(now()-starttime)
+fig,ax=subplots(nrows=2,squeeze=false)
+avgdegdist=mean(degreedistributiondata,axis=0)
+meddegdist=median(degreedistributiondata,axis=0)
+ddhigh475=percentile(degreedistributiondata,97.5,axis=0)
+ddlow475=percentile(degreedistributiondata,2.5,axis=0)
+
+avgcc=mean(clusteringcoefdata,axis=0)
+cchigh475=percentile(clusteringcoefdata,97.5,axis=0)
+cclow475=percentile(clusteringcoefdata,2.5,axis=0)
+
+ax[0,0].set_xlim([0,32])
+ax[0,0].plot(xaxisdd,avgdegdist,color='black')
+ax[0,0].plot(xaxisdd,meddegdist,color="green")
+ax[0,0].fill_between(x=xaxisdd,y1=avgdegdist,y2=ddhigh475,color='blue')
+ax[0,0].fill_between(x=xaxisdd,y1=avgdegdist,y2=ddlow475,color='blue')
+
+ax[1,0].set_ylim([0,1])
+ax[1,0].plot(xaxiscc,avgcc,color='red')
+ax[1,0].fill_between(x=xaxiscc,y1=avgcc,y2=cchigh475,color='#FF6666')
+ax[1,0].fill_between(x=xaxiscc,y1=avgcc,y2=cclow475,color='#FF6666')
+
+println(now()-start)
+
+show()
