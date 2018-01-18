@@ -1,43 +1,46 @@
+#all the packages necessary (I think)
 using PyPlot
 using LightGraphs
 using StatsBase
 
+#start of program for efficiency purposes
+starttime=now()
+
+#C=cost for cooperation, B=benefit if other person cooperates
 C=1
 B=4
 
-starttime=now()
+population=Individual[]#all the individuals in the population
+populationsize=100#the total size of the population
+numberoftimesteps=2000#the number of "tournaments" and reproductions per simulation
+currtimestep=1#the current time step in the iteration
+mutationrate=0.001#the likelihood an individual will mutate its strategy
+iterations=50#the number of games per "tournament"
 
-population=Individual[]
-populationsize=100
-numberoftimesteps=2000
-currtimestep=0
-mutationrate=0.001
-iterations=50
+strategies=["ALLC", "ALLD", "TIT4TAT", "CAUTIOUSTIT", "ALTERNATE", "RANDOM"]#all of the possible strategies
+STRATSSIZE=6#the size of the strategy array--capitalized because it's constant
 
-strategies=["ALLC", "ALLD", "TIT4TAT", "CAUTIOUSTIT", "ALTERNATE", "RANDOM"]
-STRATSSIZE=6
+data=zeros(STRATSSIZE, numberoftimesteps)#an array of how many people have strategy i at time step j
 
-data=zeros(STRATSSIZE, numberoftimesteps)
+simulationruns=5#the number of repeated simulations
+degreedistributiondata=zeros(simulationruns, populationsize)#an array storing the degree distributions from each simulation
+clusteringcoefdata=zeros(500,populationsize+1)#same as above, but for clustering coefficients
+howmanydie=10#how many individuals die in each time step
 
-simulationruns=5
-degreedistributiondata=zeros(simulationruns, populationsize)
-clusteringcoefdata=zeros(500,populationsize+1)
-howmanydie=10
+pb=1#the likelihood an individual will have a social link with its mother
+pn=0.85#the likelihood an individual will have a social link with its mother's connections
+pr=0.017#the likelihood an individual will have a social link with another individual not connected to its mother
+relationships=zeros(Integer,populationsize,populationsize)#an arrray of the relationships between all individuals--individuals i and j aren't linked if relationships[i,j]=0 and are if relationships[i,j]=1--relationships[i,j] always equals relationships[j,i]
 
-pb=1
-pn=0.85
-pr=0.017
-relationships=zeros(Integer,populationsize,populationsize)
-
-mutable struct Individual
-  strategy::String
-  payoff::Int
-  moves
-  alwaysC::Bool
-  alwaysD::Bool
-  index
-  function Individual(strat, pay, ind)
-    if(strat=="rand")
+mutable struct Individual#the type for the individuals playing games
+  strategy::String#the individual's strategy selected from the strategies array
+  payoff::Int#the individual's total payoff in each time step
+  moves#the individual's array of all moves made in one "tournament"
+  alwaysC::Bool#true if the individual's strategy is ALLC
+  alwaysD::Bool#true if the individual's strategy is ALLD
+  index#the individual's index in the population array
+  function Individual(strat, pay, ind)#generates a new individual with strategy strat, payoff pay, and index ind
+    if(strat=="rand")#if strat="rand", it gives the individual a random strategy instead
       new(strategies[ceil(Integer,(rand()*STRATSSIZE))],pay,[],false,false,ind)
     else
       new(strat,pay,[],false,false,ind)
@@ -45,22 +48,22 @@ mutable struct Individual
   end
 end
 
-function computemove(self::Individual, opponent::Individual, iter::Integer)
-  if(self.alwaysD==true)
+function computemove(self::Individual, opponent::Individual, iter::Integer)#determines an individual's move in one game
+  if(self.alwaysD==true)#if an individual's strategy is ALLC or ALLD, these will shortcut the function after the first game
     return "D"
   end
   if(self.alwaysC==true)
     return "C"
   end
 
-  out="C"
+  out="C"#the returned value--C indicates cooperation and D defection
 
-  if(self.strategy=="ALLD")
+  if(self.strategy=="ALLD")#The individual always defects--this statement should be shortcut after the first game
     self.alwaysD=true
     out="D"
   end
 
-  if(self.strategy=="ALLC")
+  if(self.strategy=="ALLC")#the individual always cooperates--should be shortcut after the first game by the above if-statements
     self.alwaysC=true
   end
 
@@ -75,33 +78,33 @@ function computemove(self::Individual, opponent::Individual, iter::Integer)
       out=opponent.moves[iter-1]
   end
 
-  if(self.strategy=="ALTERNATE")
+  if(self.strategy=="ALTERNATE")#starts by cooperating, then switches moves every game
     if(iter>1)
       if(self.moves[iter-1]=="C")
         out=="D"
   end
 
-  if(self.strategy=="RANDOM")
+  if(self.strategy=="RANDOM")#picks a random move via "coin flip"
     if(rand()>0.5)
       out=="D"
   end
   return out
 end
-function addtopayoff(self::Individual, gamepay::Integer)
+function addtopayoff(self::Individual, gamepay::Integer)#somewhat unnecessary, as Individual is mutable
   self.payoff+=gamepay
 end
-function mutate(self::Individual)
+function mutate(self::Individual)#again, somewhat unnecessary
   self.strategy=strategies[ceil(Integer,(rand()*STRATSSIZE))]
 end
-function findfitness(self::Individual)
+function findfitness(self::Individual)#completely unnecessary--all of these above functions are merely created to keep the program as identical as possible to the Python version for comparison
   return self.payoff
 end
-function clearmoves(self::Individual)
-  if(length(self.moves)==iterations)
+function clearmoves(self::Individual)#resets the moves array of an individual
+  if(length(self.moves)==iterations)#if the array is the right length, simply replace every move with "None"
     for i=1:iterations
       self.moves[i]="None"
     end
-  else
+else#otherwise, replace all the existing moves with "None" and append "None" as much as necessary
     for i=1:length(self.moves)
       self.moves[i]="None"
     end
@@ -111,15 +114,15 @@ function clearmoves(self::Individual)
   end
 end
 
-function initsim()
-  population=[]
-  relationships=zeros(Integer,populationsize,populationsize)
-  for i=1:(populationsize)
+function initsim()#reset/create the simulation after each run
+  population=[]#clear the population array
+  relationships=zeros(Integer,populationsize,populationsize)#reset the relationships grid
+  for i=1:(populationsize)#make the right number of Individuals with random strategies and add them to the population
     guy=Individual("rand",0,i)
     clearmoves(guy)
     push!(population, guy)
   end
-  for i=1:populationsize,j=i:populationsize
+  for i=1:populationsize,j=i:populationsize#randomly create relationships between individuals in the array (with chance=pr that a relationship will form)
     if(j!=i)
       if(rand<pr)
         relationships[i,j]=1
@@ -129,60 +132,60 @@ function initsim()
   end
 end
 
-function runsim()
+function runsim()#just a helper function--reset/create the simulation then run the specified number of time steps
   initsim()
   for i=1:numberoftimesteps
     runtimestep()
   end
 end
 
-function getother(individual, selfindex)
-  ppl=[]
-  for i=1:populationsize
+function getother(individual, selfindex)#retrieves another individual to play a game against--both individuals will almost always be linked
+  ppl=[]#an array of all the individual's social connections
+  for i=1:populationsize#add all the individual's connections to the array
     if(relationships[selfindex,i]==1)
       push!(ppl,i)
     end
   end
-  if(rand()<0.1||length(ppl)==0)
-    otherindividual=population[ceil(Integer,(rand()*populationsize))]
+  if(rand()<0.1||length(ppl)==0)#there is a 10% chance that the game will be against a random individual(also happens if an individual has no connections)
+    otherindividual=population[ceil(Integer,(rand()*populationsize))]#pick a random individual from the whole array, then repick if the individual chosen is the same one
     while otherindividual==individual
-      randindex=ceil(Integer,(rand()*populationsize))
-      otherindividual=population[randindex]
+        randindex=ceil(Integer,(rand()*populationsize))
+        otherindividual=population[randindex]
     end
     return otherindividual
-  else
+  else#pick a random individual from ppl then repick if an unlinked individual snuck in
     other=ceil(Integer,(rand()*length(ppl))
-    while(relationships[selfindex][ppl[other]]==0)
-      other=ceil(Integer,(rand()*length(ppl))
+    while(relationships[selfindex,ppl[other]]==0)
+        other=ceil(Integer,(rand()*length(ppl))
     end
     return population[ppl[other]]
   end
 end
 
-function playgame(ind1, ind2)
-  if(currtimestep!=0)
+function playgame(ind1, ind2)#play a game between two individuals
+  if(currtimestep!=1)#clear moves from the last game if it's not the first game
     clearmoves(ind1)
     clearmoves(ind2)
   end
-  payoff2=0
-  for i=1:iterations
-    move1=computemove(ind1,ind2,i)
-    move2=computemove(ind2,ind1,i)
-    ind1.moves[i]=move1
-    ind2.moves[i]=move2
-    if(move1=="C")
-      if(move2=="C")
+  payoff2=0#stores the other individual's payoff
+  for i=1:iterations#play a number of moves equal to iterations
+    move1=computemove(ind1,ind2,i)#compute individual 1's move
+    move2=computemove(ind2,ind1,i)#compute individual 2's move
+    ind1.moves[i]=move1#add individual 1's move to their moves array
+    ind2.moves[i]=move2#add individual 2's move to their moves array
+    if(move1=="C")#if individual 1 cooperates
+      if(move2=="C")#if individual 2 also cooperates, they both gain b-c to their payoff
         addtopayoff(ind1,b-c)
         payoff2+=(b-c)
-      else
+    else#if individual 2 defected, individual 1 loses c from their payoff and individual 2 gains b
         addtopayoff(ind1,-c)
         payoff2+=b
       end
-    else
-      if(move2=="C")
+    else#if individual 1 defects
+      if(move2=="C")#if individual 2 cooperates, individual 1 gains b and individual 2 loses c
         addtopayoff(ind1,b)
         payoff2-=c
-      else
+    else#if individual 2 defected, they both lose c
         addtopayoff(ind1,-c)
         payoff2-=c
       end
@@ -191,94 +194,97 @@ function playgame(ind1, ind2)
   end
 end
 
-function whodies()
-  deaths=[]
-  min=1000
-  for i=1:populationsize
+function whodies()#determines who dies
+  deaths=[]#an array (the returned value) of all the possible deaths
+  min=1000#stores the lowest payoff in the population
+  for i=1:populationsize#find the lowest payoff
     if(population[i].payoff<min)
       min=population[i].payoff
+    end
   end
-  while length(deaths)<howmanydie
-    index=ceil(Integer,(rand()*populationsize))
+  while length(deaths)<howmanydie#find a number to die equal to the specified one
+    index=ceil(Integer,(rand()*populationsize))#pick a random person
     person=population[index]
     already=false
-    for i in eachindex(deaths)
+    for i in eachindex(deaths)#if they're already in the array, skip them
       if(deaths[i]==person)
         already==true
     end
-    difference=person.payoff-min
-    if(already!=true&&diference<=20)
+    end
+    difference=person.payoff-min#difference between their payoff and the lowest one
+    if(already!=true&&difference<=20)#if they're not already doomed and their payoff is no more than 20 greater than the lowest one, add them to the deaths array
       push!(deaths,index)
     end
   end
   return deaths
 end
 
-function whoreproduces()
-  moms=[]
-  max=-50
-  for i=1:populationsize
+function whoreproduces()#determines who reproduces
+  moms=[]#the returned array of moms
+  max=-50#stores the highest payoff in the population
+  for i=1:populationsize#find the highest payoff
     if(population[i].payoff>max)
       max=population[i].payoff
     end
   end
-  while(length(moms)<howmanydie)
-    index=ceil(Integer,(rand()*populationsize))
+  while(length(moms)<howmanydie)#find a number equal to how many die (since the population is in stationarity, these have to be the same)
+    index=ceil(Integer,(rand()*populationsize))#pick a random individual
     person=population[index]
     already=false
-    for i=1:length(moms)
+    for i=1:length(moms)#if they're already in the array, skip them
       if(moms[i]==person)
         already=true
     end
-    difference=max-person.payoff
-    if(already!=true&&difference<=20)
+    end
+    difference=max-person.payoff#find the difference between their payoff and the highest one
+    if(already!=true&&difference<=20)#if they aren't in the array and their payoff is no more than twenty below the highest, add them to the array
       push!(moms, index)
     end
   end
   return moms
 end
 
-function games()
+function games()#do all the games for one simulation
   for i=1:populationsize
-    println(i)
-    currindividual=population[i]
-    otherindividual=getother(currindividual,i)
-    playgame(currindividual,otherindividual)
+    println(i)#just to confirm everyone is hit
+    currindividual=population[i]#get the individual
+    otherindividual=getother(currindividual,i)#get the opponent
+    playgame(currindividual,otherindividual)#play the games
   end
 end
 
-function selection()
-  deadppl=whodies()
-  mothers=whoreproduces()
-  for i in eachindex(deadppl)
+function selection()#figure out who dies and who reproduces
+  deadppl=whodies()#get the people who will die
+  mothers=whoreproduces()#get the people who will reproduce
+  for i in eachindex(deadppl)#replace all the dead people with corresponding children of the mothers
     population[deadppl[i]]=Individual(population[mothers[i]].strategy,0,deadppl[i])
-    for j=1:populationsize
+    for j=1:populationsize#clear the new child's relationships
       relationships[deadppl[i],j]=0
       relationships[j,deadppl[i]]=0
     end
-    if(deadppl[i]!=mothers[i]&&rand()<pb)
+    if(deadppl[i]!=mothers[i]&&rand()<pb)#connect the child to its mother (with probability pb, but that's currently 1)
       relationships[deadppl[i],mothers[i]]=1
       relationships[mothers[i],deadppl[i]]=1
     end
-    for j=1:populationsize
+    for j=1:populationsize#connect the child to its mother's connections w. probability pn
       if(deadppl[i]!=j&&relationships[mothers[i],j]==1&&rand()<=pn)
         relationships[deadppl[i],j]=1
         relationships[j,deadppl[i]]=1
       end
-      if(deadppl[i]!=j&&rand()<pr)
+      if(deadppl[i]!=j&&rand()<pr)#connect the child to everyone else w. probability pr
         relationships[deadppl[i],j]=1
         relationships[j,deadppl[i]]=1
       end
     end
   end
-  for i=1:populationsize
+  for i=1:populationsize#reset everyone's payoff, alwaysD, and alwaysC variables
     population[i].payoff=0
     population[i].alwaysD=false
     population[i].alwaysC=false
   end
 end
 
-function mutation
+function mutation#everyone has a random chance of mutating (probability equal to mutationrate)
   for i=1:populationsize
     if(rand()<mutationrate)
       currindividual=population[i]
@@ -287,7 +293,7 @@ function mutation
   end
 end
 
-function getnumwithstrat(strat)
+function getnumwithstrat(strat)#go through the entire population and return the number with any given strategy
   count=0
   for i=1:populationsize
     if(population[i].strategy==strat)
@@ -297,74 +303,76 @@ function getnumwithstrat(strat)
   return count
 end
 
-function runtimestep()
-  games()
-  selection()
-  mutation()
-  for i=1:STRATSSIZE
+function runtimestep()#helper function--collects all the necessary operations for a time step
+  games()#play games
+  selection()#kill some people and have others reproduce
+  mutation()#give everyone a chance to mutate
+  for i=1:STRATSSIZE#add the strategy counts to the data array
     data[i,currtimestep]=getnumwithstrat(strategies[i])
   end
-  currtimestep+=1
+  currtimestep+=1#move to the next timestep
 end
 
-for k=1:simulationruns
-  strt=now()
-  currtimestep=0
-  runsim()
+for k=1:simulationruns#run the simulation several times
+  currtimestep=1#reset the timesteps
+  runsim()#run an entire simulation
 
-  degreedistribution=zeros(populationsize)
-  clusco=zeros(populationsize+1)
+  degreedistribution=zeros(populationsize)#reset the temporary degree distribution array
+  clusco=zeros(populationsize+1)#do the same for the clustering coefficient array
 
-  g=Graph().Adjacency(relationships,mode=1)
+  g=Graph().Adjacency(relationships,mode=1)#make the graph to get data from
 
-  howmanyconnections=g.degree(list(range(populationsize)),mode=3,loops=true)
-  localcoefs=g.transitivity_local_undirected(list(range(populationsize)),mode="zero")
+  howmanyconnections=g.degree(list(range(populationsize)),mode=3,loops=true)#find a list of each individual's degree
+  localcoefs=g.transitivity_local_undirected(list(range(populationsize)),mode="zero")#do the same for each cc
 
-  for i=1:populationsize
+  for i=1:populationsize#count the number of individuals w. any given degree and cc
     degreedistribution[howmanyconnections[i]]+=1
     clusco[trunc(localcoefs[i]*67)]+=1
 end
-  popleft=populationsize
-  for i=1:populationsize
-    popleft-=degreedistribution[i]
-    degreedistribution[i]=popleft/populationsize
+  for i=1:populationsize#find the percentage of the population w. each degree
+    degreedistribution[i]/=populationsize
   end
-  popleft=populationsize
-  for i=1:length(clusteringcoefdata[0])
-    popleft-=clusco[i]
-    clusco[i]=popleft/populationsize
+  for i=1:length(clusteringcoefdata[0])#find the percentage of the population w. each cc
+    clusco[i]/=populationsize
     end
 
-  degreedistributiondata[k]=degreedistribution
-  clusteringcoefdata[k]=clusco
-
-  println(now()-strt)
+  degreedistributiondata[k]=degreedistribution#add the data from this simulation to the full array of degree data
+  clusteringcoefdata[k]=clusco#add the data from this simulation to the full array of cc data
 end
 
+#create the x-axis dimensions for both plots
 xaxisdd=arange(0,length(degreedistributiondata[0]),1)
 xaxiscc=arange(0,1,1/(populationsize+1))
 
+#divide the big plot into two subplots for each set of data
 fig,ax=subplots(nrows=2,squeeze=false)
+
+#calculate statistics (mean, median, bottom 2.5%, and top 2.5%) for the degree distribution data
 avgdegdist=mean(degreedistributiondata,axis=0)
 meddegdist=median(degreedistributiondata,axis=0)
 ddhigh475=percentile(degreedistributiondata,97.5,axis=0)
 ddlow475=percentile(degreedistributiondata,2.5,axis=0)
 
+#calculate statistics (mean, low 2.5%, and high 2.5%) for the clustering coefficient data
 avgcc=mean(clusteringcoefdata,axis=0)
 cchigh475=percentile(clusteringcoefdata,97.5,axis=0)
 cclow475=percentile(clusteringcoefdata,2.5,axis=0)
 
+#graph the degree distribution data
 ax[0,0].set_xlim([0,32])
 ax[0,0].plot(xaxisdd,avgdegdist,color='black')
 ax[0,0].plot(xaxisdd,meddegdist,color="green")
 ax[0,0].fill_between(x=xaxisdd,y1=avgdegdist,y2=ddhigh475,color='blue')
 ax[0,0].fill_between(x=xaxisdd,y1=avgdegdist,y2=ddlow475,color='blue')
 
+#graph the clustering coefficient data
 ax[1,0].set_ylim([0,1])
 ax[1,0].plot(xaxiscc,avgcc,color='red')
 ax[1,0].fill_between(x=xaxiscc,y1=avgcc,y2=cchigh475,color='#FF6666')
 ax[1,0].fill_between(x=xaxiscc,y1=avgcc,y2=cclow475,color='#FF6666')
 
+#print the time spent to run the program
 println(now()-start)
 
+#display the graphs
 show()
