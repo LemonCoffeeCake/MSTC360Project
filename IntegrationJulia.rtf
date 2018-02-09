@@ -1,0 +1,1188 @@
+{\rtf1\ansi\ansicpg1252\cocoartf1504\cocoasubrtf830
+{\fonttbl\f0\fswiss\fcharset0 ArialMT;\f1\froman\fcharset0 Times-Roman;}
+{\colortbl;\red255\green255\blue255;\red0\green0\blue0;}
+{\*\expandedcolortbl;;\cssrgb\c0\c0\c0;}
+\margl1440\margr1440\vieww16880\viewh8400\viewkind0
+\deftab720
+\pard\pardeftab720\sl400\partightenfactor0
+
+\f0\fs29\fsmilli14667 \cf2 \expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec2 #all the packages necessary (I think)
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667 using PyPlot
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667 using LightGraphs
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667 using StatsBase
+\f1\fs24 \
+\pard\pardeftab720\sl280\partightenfactor0
+\cf2 \
+\pard\pardeftab720\sl400\partightenfactor0
+
+\f0\fs29\fsmilli14667 \cf2 #start of program for efficiency purposes
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667 start=now()
+\f1\fs24 \
+\pard\pardeftab720\sl280\partightenfactor0
+\cf2 \
+\pard\pardeftab720\sl400\partightenfactor0
+
+\f0\fs29\fsmilli14667 \cf2 #C=cost for cooperation, B=benefit if other person cooperates
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667 c=1
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667 b=4
+\f1\fs24 \
+\pard\pardeftab720\sl280\partightenfactor0
+\cf2 \
+\pard\pardeftab720\sl400\partightenfactor0
+
+\f0\fs29\fsmilli14667 \cf2 mutable struct Individual#the type for the individuals playing games
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0strategy::String#the individual's strategy selected from the strategies array
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0payoff::Int#the individual's total payoff in each time step
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0moves#the individual's array of all moves made in one "tournament"
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0alwaysC::Bool#true if the individual's strategy is ALLC
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0alwaysD::Bool#true if the individual's strategy is ALLD
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0index#the individual's index in the population array
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0function Individual(strat, pay, ind)#generates a new individual with strategy strat, payoff pay, and index ind
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0if(strat=="rand")#if strat="rand", it gives the individual a random strategy instead
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0\'a0\'a0new(strategies[ceil(Integer,(rand()*STRATSSIZE))],pay,[],false,false,ind)
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0else
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0\'a0\'a0new(strat,pay,[],false,false,ind)
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0end
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0end
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667 end
+\f1\fs24 \
+\pard\pardeftab720\sl280\partightenfactor0
+\cf2 \
+\pard\pardeftab720\sl400\partightenfactor0
+
+\f0\fs29\fsmilli14667 \cf2 population=Individual[]#all the individuals in the population
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667 populationsize=100#the total size of the population
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667 numberoftimesteps=2000#the number of "tournaments" and reproductions per simulation
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667 currtimestep=1#the current time step in the iteration
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667 mutationrate=0.001#the likelihood an individual will mutate its strategy
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667 iterations=50#the number of games per "tournament"
+\f1\fs24 \
+\pard\pardeftab720\sl280\partightenfactor0
+\cf2 \
+\pard\pardeftab720\sl400\partightenfactor0
+
+\f0\fs29\fsmilli14667 \cf2 strategies=["ALLC", "ALLD", "TIT4TAT", "CAUTIOUSTIT", "ALTERNATE", "RANDOM"]#all of the possible strategies
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667 STRATSSIZE=6#the size of the strategy array--capitalized because it's constant
+\f1\fs24 \
+\pard\pardeftab720\sl280\partightenfactor0
+\cf2 \
+\pard\pardeftab720\sl400\partightenfactor0
+
+\f0\fs29\fsmilli14667 \cf2 data=zeros(STRATSSIZE, numberoftimesteps)#an array of how many people have strategy i at time step j
+\f1\fs24 \
+\pard\pardeftab720\sl280\partightenfactor0
+\cf2 \
+\pard\pardeftab720\sl400\partightenfactor0
+
+\f0\fs29\fsmilli14667 \cf2 simulationruns=5#the number of repeated simulations
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667 degreedistributiondata=zeros(simulationruns, populationsize)#an array storing the degree distributions from each simulation
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667 clusteringcoefdata=zeros(500,populationsize+1)#same as above, but for clustering coefficients
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667 howmanydie=10#how many individuals die in each time step
+\f1\fs24 \
+\pard\pardeftab720\sl280\partightenfactor0
+\cf2 \
+\pard\pardeftab720\sl400\partightenfactor0
+
+\f0\fs29\fsmilli14667 \cf2 pb=1#the likelihood an individual will have a social link with its mother
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667 pn=0.85#the likelihood an individual will have a social link with its mother's connections
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667 pr=0.017#the likelihood an individual will have a social link with another individual not connected to its mother
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667 relationships=zeros(Integer,populationsize,populationsize)#an arrray of the relationships between all individuals--individuals i and j aren't linked if relationships[i,j]=0 and are if relationships[i,j]=1--relationships[i,j] always equals relationships[j,i]
+\f1\fs24 \
+\pard\pardeftab720\sl280\partightenfactor0
+\cf2 \
+\pard\pardeftab720\sl400\partightenfactor0
+
+\f0\fs29\fsmilli14667 \cf2 function computemove(self::Individual, opponent::Individual, iter::Integer)#determines an individual's move in one game
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0if(self.alwaysD==true)#if an individual's strategy is ALLC or ALLD, these will shortcut the function after the first game
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0return "D"
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0end
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0if(self.alwaysC==true)
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0return "C"
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0end
+\f1\fs24 \
+\pard\pardeftab720\sl280\partightenfactor0
+\cf2 \
+\pard\pardeftab720\sl400\partightenfactor0
+
+\f0\fs29\fsmilli14667 \cf2  \'a0out="C"#the returned value--C indicates cooperation and D defection
+\f1\fs24 \
+\pard\pardeftab720\sl280\partightenfactor0
+\cf2 \
+\pard\pardeftab720\sl400\partightenfactor0
+
+\f0\fs29\fsmilli14667 \cf2  \'a0if(self.strategy=="ALLD")#The individual always defects--this statement should be shortcut after the first game
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0self.alwaysD=true
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0out="D"
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0end
+\f1\fs24 \
+\pard\pardeftab720\sl280\partightenfactor0
+\cf2 \
+\pard\pardeftab720\sl400\partightenfactor0
+
+\f0\fs29\fsmilli14667 \cf2  \'a0if(self.strategy=="ALLC")#the individual always cooperates--should be shortcut after the first game by the above if-statements
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0self.alwaysC=true
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0end
+\f1\fs24 \
+\pard\pardeftab720\sl280\partightenfactor0
+\cf2 \
+\pard\pardeftab720\sl400\partightenfactor0
+
+\f0\fs29\fsmilli14667 \cf2  \'a0if(self.strategy=="TIT4TAT") #The Tit For Tat strategy starts by cooperating then repeats the opponent's previous move
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0if(iter>1)
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0\'a0\'a0out=opponent.moves[iter-1]
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0end
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0end
+\f1\fs24 \
+\pard\pardeftab720\sl280\partightenfactor0
+\cf2 \
+\pard\pardeftab720\sl400\partightenfactor0
+
+\f0\fs29\fsmilli14667 \cf2  \'a0if(self.strategy=="CAUTIOUSTIT")#Same as Tit for Tat, but starts by defecting
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0out="D"
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0if(iter>1)
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0\'a0\'a0out=opponent.moves[iter-1]
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0end
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0end
+\f1\fs24 \
+\pard\pardeftab720\sl280\partightenfactor0
+\cf2 \
+\pard\pardeftab720\sl400\partightenfactor0
+
+\f0\fs29\fsmilli14667 \cf2  \'a0if(self.strategy=="ALTERNATE")#starts by cooperating, then switches moves every game
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0if(iter>1)
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0\'a0\'a0if(self.moves[iter-1]=="C")
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0\'a0\'a0\'a0\'a0out="D"
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0\'a0\'a0end
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0end
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0end
+\f1\fs24 \
+\pard\pardeftab720\sl280\partightenfactor0
+\cf2 \
+\pard\pardeftab720\sl400\partightenfactor0
+
+\f0\fs29\fsmilli14667 \cf2  \'a0if(self.strategy=="RANDOM")#picks a random move via "coin flip"
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0if(rand()>0.5)
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0\'a0\'a0out="D"
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0end
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0end
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0return out
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667 end
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667 function addtopayoff(self::Individual, gamepay::Integer)#somewhat unnecessary, as Individual is mutable
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0self.payoff+=gamepay
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667 end
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667 function mutate(self::Individual)#again, somewhat unnecessary
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0self.strategy=strategies[ceil(Integer,(rand()*STRATSSIZE))]
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667 end
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667 function findfitness(self::Individual)#completely unnecessary--all of these above functions are merely created to keep the program as identical as possible to the Python version for comparison
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0return self.payoff
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667 end
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667 function clearmoves(self::Individual)#resets the moves array of an individual
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0if(length(self.moves)==iterations)#if the array is the right length, simply replace every move with "None"
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0for i=1:iterations
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0\'a0\'a0self.moves[i]="None"
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0end
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667 else#otherwise, replace all the existing moves with "None" and append "None" as much as necessary
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0for i=1:length(self.moves)
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0\'a0\'a0self.moves[i]="None"
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0end
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0for i=1:(iterations-length(self.moves))
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0\'a0\'a0\'a0\'a0push!(self.moves,"None")
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0end
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0end
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667 end
+\f1\fs24 \
+\pard\pardeftab720\sl280\partightenfactor0
+\cf2 \
+\pard\pardeftab720\sl400\partightenfactor0
+
+\f0\fs29\fsmilli14667 \cf2 function initsim()#reset/create the simulation after each run
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0global population=[]#clear the population array
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0global relationships=zeros(Integer,populationsize,populationsize)#reset the relationships grid
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0for i=1:(populationsize)#make the right number of Individuals with random strategies and add them to the population
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0guy=Individual("rand",0,i)
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0clearmoves(guy)
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0push!(population, guy)
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0end
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0for i=1:populationsize
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0for j=i:populationsize#randomly create relationships between individuals in the array (with chance=pr that a relationship will form)
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0\'a0\'a0\'a0\'a0if(j!=i)
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0\'a0\'a0\'a0\'a0\'a0\'a0\'a0\'a0if(rand()<pr)
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0\'a0\'a0\'a0\'a0\'a0\'a0\'a0\'a0\'a0\'a0\'a0\'a0relationships[i,j]=1
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0\'a0\'a0\'a0\'a0\'a0\'a0\'a0\'a0\'a0\'a0\'a0\'a0relationships[j,i]=1
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0\'a0\'a0\'a0\'a0\'a0\'a0\'a0\'a0end
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0\'a0\'a0\'a0\'a0end
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0end
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0end
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667 end
+\f1\fs24 \
+\pard\pardeftab720\sl280\partightenfactor0
+\cf2 \
+\pard\pardeftab720\sl400\partightenfactor0
+
+\f0\fs29\fsmilli14667 \cf2 function runsim()#just a helper function--reset/create the simulation then run the specified number of time steps
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0initsim()
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0for i=1:numberoftimesteps
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0runtimestep()
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0end
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667 end
+\f1\fs24 \
+\pard\pardeftab720\sl280\partightenfactor0
+\cf2 \
+\pard\pardeftab720\sl400\partightenfactor0
+
+\f0\fs29\fsmilli14667 \cf2 function getother(individual, selfindex)#retrieves another individual to play a game against--both individuals will almost always be linked
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0ppl=[]#an array of all the individual's social connections
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0for i=1:populationsize#add all the individual's connections to the array
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0if(relationships[selfindex,i]==1)
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0\'a0\'a0push!(ppl,i)
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0end
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0end
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0if(rand()<0.1||length(ppl)==0)#there is a 10% chance that the game will be against a random individual(also happens if an individual has no connections)
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0otherindividual=population[ceil(Integer,(rand()*populationsize))]#pick a random individual from the whole array, then repick if the individual chosen is the same one
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0while otherindividual==individual
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0\'a0\'a0\'a0\'a0randindex=ceil(Integer,(rand()*populationsize))
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0\'a0\'a0\'a0\'a0otherindividual=population[randindex]
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0end
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0return otherindividual
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0else#pick a random individual from ppl then repick if an unlinked individual snuck in
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0other=ceil(Integer,(rand()*length(ppl)))
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0while(relationships[selfindex,ppl[other]]==0)
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0\'a0\'a0\'a0\'a0other=ceil(Integer,(rand()*length(ppl)))
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0end
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0return population[ppl[other]]
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0end
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667 end
+\f1\fs24 \
+\pard\pardeftab720\sl280\partightenfactor0
+\cf2 \
+\pard\pardeftab720\sl400\partightenfactor0
+
+\f0\fs29\fsmilli14667 \cf2 function playgame(ind1, ind2)#play a game between two individuals
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0if(currtimestep!=1)#clear moves from the last game if it's not the first game
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0clearmoves(ind1)
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0clearmoves(ind2)
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0end
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0payoff2=0#stores the other individual's payoff
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0for i=1:iterations#play a number of moves equal to iterations
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0move1=computemove(ind1,ind2,i)#compute individual 1's move
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0move2=computemove(ind2,ind1,i)#compute individual 2's move
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0ind1.moves[i]=move1#add individual 1's move to their moves array
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0ind2.moves[i]=move2#add individual 2's move to their moves array
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0if(move1=="C")#if individual 1 cooperates
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0\'a0\'a0if(move2=="C")#if individual 2 also cooperates, they both gain b-c to their payoff
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0\'a0\'a0\'a0\'a0addtopayoff(ind1,b-c)
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0\'a0\'a0\'a0\'a0payoff2+=(b-c)
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0else#if individual 2 defected, individual 1 loses c from their payoff and individual 2 gains b
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0\'a0\'a0\'a0\'a0addtopayoff(ind1,-c)
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0\'a0\'a0\'a0\'a0payoff2+=b
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0\'a0\'a0end
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0else#if individual 1 defects
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0\'a0\'a0if(move2=="C")#if individual 2 cooperates, individual 1 gains b and individual 2 loses c
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0\'a0\'a0\'a0\'a0addtopayoff(ind1,b)
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0\'a0\'a0\'a0\'a0payoff2-=c
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0else#if individual 2 defected, they both lose c
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0\'a0\'a0\'a0\'a0addtopayoff(ind1,-c)
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0\'a0\'a0\'a0\'a0payoff2-=c
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0\'a0\'a0end
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0end
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0#add the relationship breaker here (if both payoffs are below -50)
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0end
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667 end
+\f1\fs24 \
+\pard\pardeftab720\sl280\partightenfactor0
+\cf2 \
+\pard\pardeftab720\sl400\partightenfactor0
+
+\f0\fs29\fsmilli14667 \cf2 function whodies()#determines who dies
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0deaths=[]#an array (the returned value) of all the possible deaths
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0min=1000#stores the lowest payoff in the population
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0for i=1:populationsize#find the lowest payoff
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0if(population[i].payoff<min)
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0\'a0\'a0min=population[i].payoff
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0end
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0end
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0while length(deaths)<howmanydie#find a number to die equal to the specified one
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0index=ceil(Integer,(rand()*populationsize))#pick a random person
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0person=population[index]
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0already=false
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0for i in eachindex(deaths)#if they're already in the array, skip them
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0\'a0\'a0if(deaths[i]==person)
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0\'a0\'a0\'a0\'a0already=true
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0\'a0\'a0end
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0end
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0difference=person.payoff-min#difference between their payoff and the lowest one
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0if(already!=true&&difference<=20)#if they're not already doomed and their payoff is no more than 20 greater than the lowest one, add them to the deaths array
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0\'a0\'a0push!(deaths,index)
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0end
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0end
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0return deaths
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667 end
+\f1\fs24 \
+\pard\pardeftab720\sl280\partightenfactor0
+\cf2 \
+\pard\pardeftab720\sl400\partightenfactor0
+
+\f0\fs29\fsmilli14667 \cf2 function whoreproduces()#determines who reproduces
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0moms=[]#the returned array of moms
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0max=-50#stores the highest payoff in the population
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0for i=1:populationsize#find the highest payoff
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0if(population[i].payoff>max)
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0\'a0\'a0max=population[i].payoff
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0end
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0end
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0while(length(moms)<howmanydie)#find a number equal to how many die (since the population is in stationarity, these have to be the same)
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0index=ceil(Integer,(rand()*populationsize))#pick a random individual
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0person=population[index]
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0already=false
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0for i=1:length(moms)#if they're already in the array, skip them
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0\'a0\'a0if(moms[i]==person)
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0\'a0\'a0\'a0\'a0already=true
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0\'a0\'a0end
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0end
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0difference=max-person.payoff#find the difference between their payoff and the highest one
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0if(already!=true&&difference<=20)#if they aren't in the array and their payoff is no more than twenty below the highest, add them to the array
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0\'a0\'a0push!(moms, index)
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0end
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0end
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0return moms
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667 end
+\f1\fs24 \
+\pard\pardeftab720\sl280\partightenfactor0
+\cf2 \
+\pard\pardeftab720\sl400\partightenfactor0
+
+\f0\fs29\fsmilli14667 \cf2 function games()#do all the games for one simulation
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0for i=1:populationsize
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0currindividual=population[i]#get the individual
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0otherindividual=getother(currindividual,i)#get the opponent
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0playgame(currindividual,otherindividual)#play the games
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0end
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667 end
+\f1\fs24 \
+\pard\pardeftab720\sl280\partightenfactor0
+\cf2 \
+\pard\pardeftab720\sl400\partightenfactor0
+
+\f0\fs29\fsmilli14667 \cf2 function selection()#figure out who dies and who reproduces
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0deadppl=whodies()#get the people who will die
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0mothers=whoreproduces()#get the people who will reproduce
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0for i in eachindex(deadppl)#replace all the dead people with corresponding children of the mothers
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0global population[deadppl[i]]=Individual(population[mothers[i]].strategy,0,deadppl[i])
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0for j=1:populationsize#clear the new child's relationships
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0\'a0\'a0global relationships[deadppl[i],j]=0
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0\'a0\'a0relationships[j,deadppl[i]]=0
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0end
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0if(deadppl[i]!=mothers[i]&&rand()<pb)#connect the child to its mother (with probability pb, but that's currently 1)
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0\'a0\'a0relationships[deadppl[i],mothers[i]]=1
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0\'a0\'a0relationships[mothers[i],deadppl[i]]=1
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0end
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0for j=1:populationsize#connect the child to its mother's connections w. probability pn
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0\'a0\'a0if(deadppl[i]!=j&&relationships[mothers[i],j]==1&&rand()<=pn)
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0\'a0\'a0\'a0\'a0relationships[deadppl[i],j]=1
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0\'a0\'a0\'a0\'a0relationships[j,deadppl[i]]=1
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0\'a0\'a0end
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0\'a0\'a0if(deadppl[i]!=j&&rand()<pr)#connect the child to everyone else w. probability pr
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0\'a0\'a0\'a0\'a0relationships[deadppl[i],j]=1
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0\'a0\'a0\'a0\'a0relationships[j,deadppl[i]]=1
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0\'a0\'a0end
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0end
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0end
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0for i=1:populationsize#reset everyone's payoff, alwaysD, and alwaysC variables
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0population[i].payoff=0
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0population[i].alwaysD=false
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0population[i].alwaysC=false
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0end
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667 end
+\f1\fs24 \
+\pard\pardeftab720\sl280\partightenfactor0
+\cf2 \
+\pard\pardeftab720\sl400\partightenfactor0
+
+\f0\fs29\fsmilli14667 \cf2 function mutation()#everyone has a random chance of mutating (probability equal to mutationrate)
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0for i=1:populationsize
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0\'a0\'a0\'a0\'a0if(rand()<mutationrate)
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0\'a0\'a0\'a0\'a0\'a0\'a0\'a0\'a0currindividual=population[i]
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0\'a0\'a0\'a0\'a0\'a0\'a0\'a0\'a0mutate(currindividual)
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0\'a0\'a0\'a0\'a0end
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0end
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667 end
+\f1\fs24 \
+\pard\pardeftab720\sl280\partightenfactor0
+\cf2 \
+\pard\pardeftab720\sl400\partightenfactor0
+
+\f0\fs29\fsmilli14667 \cf2 function getnumwithstrat(strat)#go through the entire population and return the number with any given strategy
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0count=0
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0for i=1:populationsize
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0if(population[i].strategy==strat)
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0\'a0\'a0count+=1
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0end
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0end
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0return count
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667 end
+\f1\fs24 \
+\pard\pardeftab720\sl280\partightenfactor0
+\cf2 \
+\pard\pardeftab720\sl400\partightenfactor0
+
+\f0\fs29\fsmilli14667 \cf2 function runtimestep()#helper function--collects all the necessary operations for a time step
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0games()#play games
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0selection()#kill some people and have others reproduce
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0mutation()#give everyone a chance to mutate
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0for i=1:STRATSSIZE#add the strategy counts to the data array
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0global data[i,currtimestep]=getnumwithstrat(strategies[i])
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0end
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0global currtimestep+=1#move to the next timestep
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667 end
+\f1\fs24 \
+\pard\pardeftab720\sl280\partightenfactor0
+\cf2 \
+\pard\pardeftab720\sl400\partightenfactor0
+
+\f0\fs29\fsmilli14667 \cf2 for k=1:simulationruns#run the simulation several times
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0currtimestep=1#reset the timesteps
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0runsim()#run an entire simulation
+\f1\fs24 \
+\pard\pardeftab720\sl280\partightenfactor0
+\cf2 \
+\pard\pardeftab720\sl400\partightenfactor0
+
+\f0\fs29\fsmilli14667 \cf2  \'a0degreedistribution=zeros(populationsize)#reset the temporary degree distribution array
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0clusco=zeros(populationsize+1)#do the same for the clustering coefficient array
+\f1\fs24 \
+\pard\pardeftab720\sl280\partightenfactor0
+\cf2 \
+\pard\pardeftab720\sl400\partightenfactor0
+
+\f0\fs29\fsmilli14667 \cf2  \'a0g=Graph(relationships)#make the graph to get data from
+\f1\fs24 \
+\pard\pardeftab720\sl280\partightenfactor0
+\cf2 \
+\pard\pardeftab720\sl400\partightenfactor0
+
+\f0\fs29\fsmilli14667 \cf2  \'a0#find a list of each individual's degree
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0howmanyconnections=[]
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0for v in vertices(g)
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0\'a0\'a0push!(howmanyconnections,length(neighbors(g,v)))
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0end
+\f1\fs24 \
+\pard\pardeftab720\sl280\partightenfactor0
+\cf2 \
+\pard\pardeftab720\sl400\partightenfactor0
+
+\f0\fs29\fsmilli14667 \cf2  \'a0#do the same for each cc
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0localcoefs=local_clustering_coefficient(g,vertices(g))
+\f1\fs24 \
+\pard\pardeftab720\sl280\partightenfactor0
+\cf2 \
+\pard\pardeftab720\sl400\partightenfactor0
+
+\f0\fs29\fsmilli14667 \cf2  \'a0for i=1:populationsize#count the number of individuals w. any given degree and cc
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0if(howmanyconnections[i]!=0)
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0\'a0\'a0\'a0\'a0degreedistribution[howmanyconnections[i]]+=1
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0end
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0if(localcoefs[i]!=0)
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0\'a0\'a0\'a0\'a0clusco[ceil(Integer, localcoefs[i]*populationsize)]+=1
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0end
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0end
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0for i=1:populationsize#find the percentage of the population w. each degree
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0degreedistribution[i]/=populationsize
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0end
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0for i=1:length(clusteringcoefdata[1])#find the percentage of the population w. each cc
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0\'a0\'a0clusco[i]/=populationsize
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0end
+\f1\fs24 \
+\pard\pardeftab720\sl280\partightenfactor0
+\cf2 \
+\pard\pardeftab720\sl400\partightenfactor0
+
+\f0\fs29\fsmilli14667 \cf2  \'a0global degreedistributiondata[k,:]=degreedistribution[:]#add the data from this simulation to the full array of degree data
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667  \'a0global clusteringcoefdata[k,:]=clusco[:]#add the data from this simulation to the full array of cc data
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667 end
+\f1\fs24 \
+\pard\pardeftab720\sl280\partightenfactor0
+\cf2 \
+\pard\pardeftab720\sl400\partightenfactor0
+
+\f0\fs29\fsmilli14667 \cf2 #create the x-axis dimensions for both plots
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667 xaxisdd=0:length(degreedistributiondata[1,:])
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667 xaxiscc=0:1/(populationsize+1):1
+\f1\fs24 \
+\pard\pardeftab720\sl280\partightenfactor0
+\cf2 \
+\pard\pardeftab720\sl400\partightenfactor0
+
+\f0\fs29\fsmilli14667 \cf2 #divide the big plot into two subplots for each set of data
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667 fig,ax=subplots(nrows=2,squeeze=false)
+\f1\fs24 \
+\pard\pardeftab720\sl280\partightenfactor0
+\cf2 \
+\pard\pardeftab720\sl400\partightenfactor0
+
+\f0\fs29\fsmilli14667 \cf2 #calculate statistics (mean, median, bottom 2.5%, and top 2.5%) for the degree distribution data
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667 avgdegdist=mean(degreedistributiondata)
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667 meddegdist=median(degreedistributiondata)
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667 ddhigh475=percentile(vec(degreedistributiondata),97.5)
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667 ddlow475=percentile(vec(degreedistributiondata),2.5)
+\f1\fs24 \
+\pard\pardeftab720\sl280\partightenfactor0
+\cf2 \
+\pard\pardeftab720\sl400\partightenfactor0
+
+\f0\fs29\fsmilli14667 \cf2 #calculate statistics (mean, low 2.5%, and high 2.5%) for the clustering coefficient data
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667 avgcc=mean(clusteringcoefdata)
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667 cchigh475=percentile(vec(clusteringcoefdata),97.5)
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667 cclow475=percentile(vec(clusteringcoefdata),2.5)
+\f1\fs24 \
+\pard\pardeftab720\sl280\partightenfactor0
+\cf2 \
+\pard\pardeftab720\sl400\partightenfactor0
+
+\f0\fs29\fsmilli14667 \cf2 #graph the degree distribution data
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667 ax[1,1][:set_xlim]([0,32])
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667 ax[1,1][:plot](xaxisdd,fill(avgdegdist,101),color="black")
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667 ax[1,1][:plot](xaxisdd,fill(meddegdist,101),color="black")
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667 ax[1,1][:fill_between](x=xaxisdd,y1=avgdegdist,y2=ddhigh475,color="blue")
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667 ax[1,1][:fill_between](x=xaxisdd,y1=avgdegdist,y2=ddlow475,color="red")
+\f1\fs24 \
+\pard\pardeftab720\sl280\partightenfactor0
+\cf2 \
+\pard\pardeftab720\sl400\partightenfactor0
+
+\f0\fs29\fsmilli14667 \cf2 #graph the clustering coefficient data
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667 ax[2,1][:plot](xaxiscc,fill(avgcc,102),color="red")
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667 ax[2,1][:fill_between](x=xaxiscc,y1=avgcc,y2=cchigh475,color="#FF6666")
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667 ax[2,1][:fill_between](x=xaxiscc,y1=avgcc,y2=cclow475,color="blue")
+\f1\fs24 \
+\pard\pardeftab720\sl280\partightenfactor0
+\cf2 \
+\pard\pardeftab720\sl400\partightenfactor0
+
+\f0\fs29\fsmilli14667 \cf2 #print the time spent to run the program
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667 println(now()-start)
+\f1\fs24 \
+\pard\pardeftab720\sl280\partightenfactor0
+\cf2 \
+\pard\pardeftab720\sl400\partightenfactor0
+
+\f0\fs29\fsmilli14667 \cf2 #display the graphs
+\f1\fs24 \
+
+\f0\fs29\fsmilli14667 show()
+\f1\fs24 \
+}
