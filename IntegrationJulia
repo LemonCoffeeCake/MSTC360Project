@@ -37,7 +37,7 @@ data=zeros(STRATSSIZE, numberoftimesteps)#an array of how many people have strat
 
 simulationruns=5#the number of repeated simulations
 degreedistributiondata=zeros(simulationruns, populationsize)#an array storing the degree distributions from each simulation
-clusteringcoefdata=zeros(500,populationsize+1)#same as above, but for clustering coefficients
+clusteringcoefdata=zeros(simulationruns,populationsize+1)#same as above, but for clustering coefficients
 howmanydie=10#how many individuals die in each time step
 
 pb=1#the likelihood an individual will have a social link with its mother
@@ -339,12 +339,12 @@ for k=1:simulationruns#run the simulation several times
     clusco[ceil(Integer,localcoefs[i]*populationsize)+1]+=1
   end
   popleft=populationsize
-  for i in eachindex(degreedistributiondata[1,:])
+  for i=1:populationsize
     popleft-=degreedistribution[i]
     degreedistribution[i]=popleft/populationsize
   end
   popleft=populationsize
-  for i in eachindex(clusteringcoefdata[1,:])
+  for i=1:populationsize+1
     popleft-=clusco[i]
     clusco[i]=popleft/populationsize
   end
@@ -382,6 +382,7 @@ for j=1:populationsize+1
   cchigh475[j+1]=percentile(clusteringcoefdata[:,j],97.5)
   cclow475[j+1]=percentile(clusteringcoefdata[:,j],2.5)
 end
+print(clusteringcoefdata)
 
 #graph the degree distribution data
 ax[1,1][:set_xlim]([0,35])
