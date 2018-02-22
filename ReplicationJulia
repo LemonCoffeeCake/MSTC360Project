@@ -2,8 +2,7 @@ using PyPlot
 using LightGraphs
 using StatsBase
 
-#In this form, the program is being used for efficiency comparison to Python, so I need to know how long it takes to execute
-start=now();
+#change the graphs and probabilities to replicate figure 3(e and i) and compare them to make sure it checks out
 
 #Not entirely necessary for this section of the program--for the Prisoner's Dilemma game Individuals play in the full simulation, C is the cost of cooperation and B is the benefit if the other Individual cooperates
 C=1
@@ -167,8 +166,8 @@ end
 
 #the two arrays store the data from each run of the simulation
 simruns=500
-degreedistributiondata=zeros(500, populationsize)
-clusteringcoefdata=zeros(500,populationsize+1)
+degreedistributiondata=zeros(simruns, populationsize)
+clusteringcoefdata=zeros(simruns,populationsize+1)
 
 #running the simulation simruns times
 for j=1:simruns
@@ -189,20 +188,19 @@ for j=1:simruns
     #a similar array for clustering coefficients
     localcoefs=local_clustering_coefficient(g,vertices(g))
     for i=1:populationsize #make a count of the number of individuals with each degree/clustering coefficient
-        if(deg[i]!=0)
-            degrees[deg[i]]+=1
-        end
-        if(localcoefs[i]!=0)
-            clusco[ceil(Integer, localcoefs[i]*populationsize)]+=1
-        end
+      degrees[deg[i]+1]+=1#index= given degree, element= number with that degree
+      clusco[ceil(Integer,localcoefs[i]*populationsize)+1]+=1
     end
-    for i=1:length(degreedistributiondata[1,:]) #find the percentage of the population with each degree
-        degrees[i]/=populationsize
+    popleft=populationsize
+    for i in eachindex(degreedistributiondata[1,:])
+      popleft-=degrees[i]
+      degrees[i]=popleft/populationsize
     end
-    for i=1:length(degreedistributiondata[1,:]) #find the percentage of the population with each clustering coefficient
-        clusco[i]/=populationsize
+    popleft=populationsize
+    for i in eachindex(clusteringcoefdata[1,:])
+      popleft-= clusco[i]
+      clusco[i]=popleft/populationsize
     end
-
     #add the degree and clusco data from this trial to the overall array
     global degreedistributiondata[j,:]=degrees[:]
     global clusteringcoefdata[j,:]=clusco[:]
@@ -212,32 +210,43 @@ end
 xaxisdd=0:length(degreedistributiondata[1,:])
 xaxiscc=0:1/(populationsize+1):1
 
+#create the graph data arrays
+yaxisdd=zeros(populationsize+1)
+yaxiscc=zeros(populationsize+2)
+for j=1:populationsize
+  yaxisdd[j+1]=mean(degreedistributiondata[:,j])
+end
+for j=1:populationsize+1
+  yaxiscc[j+1]=mean(clusteringcoefdata[:,j])
+end
+
 #make two subplots (one for degree and one for clustering coefficient)
 fig,ax=subplots(nrows=2,squeeze=false)
 
 #find various statistical values for degree and then for clusco
-avgdegdist=mean(degreedistributiondata)
-meddegdist=median(degreedistributiondata)
-ddhigh475=percentile(vec(degreedistributiondata),97.5)
-ddlow475=percentile(vec(degreedistributiondata),2.5)
-
-avgcc=mean(clusteringcoefdata)
-cchigh475=percentile(vec(clusteringcoefdata),97.5)
-cclow475=percentile(vec(clusteringcoefdata),2.5)
+ddhigh475=zeros(populationsize+1)
+ddlow475=zeros(populationsize+1)
+cchigh475=zeros(populationsize+2)
+cclow475=zeros(populationsize+2)
+for j=1:populationsize
+  ddhigh475[j+1]=percentile(degreedistributiondata[:,j],97.5)
+  ddlow475[j+1]=percentile(degreedistributiondata[:,j],2.5)
+end
+for j=1:populationsize+1
+  cchigh475[j+1]=percentile(clusteringcoefdata[:,j],97.5)
+  cclow475[j+1]=percentile(clusteringcoefdata[:,j],2.5)
+end
 
 #plot the degree curve
 ax[1,1][:set_xlim]([0,32])
-ax[1,1][:plot](xaxisdd,fill(avgdegdist,16),color="green")
-ax[1,1][:plot](xaxisdd,fill(meddegdist,16),color="black")
-ax[1,1][:fill_between](x=xaxisdd,y1=avgdegdist,y2=ddhigh475,color="blue")
-ax[1,1][:fill_between](x=xaxisdd,y1=avgdegdist,y2=ddlow475,color="red")
+ax[1,1][:plot](xaxisdd,yaxisdd,color="green")
+ax[1,1][:fill_between](x=xaxisdd,y1=yaxisdd,y2=ddhigh475,color="blue")
+ax[1,1][:fill_between](x=xaxisdd,y1=yaxisdd,y2=ddlow475,color="blue")
 
 #plot the clusco curve
 ax[2,1][:set_ylim]([0,1])
-ax[2,1][:plot](xaxiscc,fill(avgcc,17),color="green")
-ax[2,1][:fill_between](x=xaxiscc,y1=avgcc,y2=cchigh475,color="#FF6666")
-ax[2,1][:fill_between](x=xaxiscc,y1=avgcc,y2=cclow475,color="blue")
-
-println(now()-start) #print the elapsed time to run the program
+ax[2,1][:plot](xaxiscc,yaxiscc,color="green")
+ax[2,1][:fill_between](x=xaxiscc,y1=yaxiscc,y2=cchigh475,color="#FF6666")
+ax[2,1][:fill_between](x=xaxiscc,y1=yaxiscc,y2=cclow475,color="#FF6666")
 
 show() #display the graphs

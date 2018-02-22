@@ -3,9 +3,6 @@ using PyPlot
 using LightGraphs
 using StatsBase
 
-#start of program for efficiency purposes
-start=now()
-
 #C=cost for cooperation, B=benefit if other person cooperates
 c=1
 b=4
@@ -337,57 +334,65 @@ for k=1:simulationruns#run the simulation several times
   #do the same for each cc
   localcoefs=local_clustering_coefficient(g,vertices(g))
 
-  for i=1:populationsize#count the number of individuals w. any given degree and cc
-    if(howmanyconnections[i]!=0)
-        degreedistribution[howmanyconnections[i]]+=1
-    end
-    if(localcoefs[i]!=0)
-        clusco[ceil(Integer, localcoefs[i]*populationsize)]+=1
-    end
+  for i=1:populationsize #make a count of the number of individuals with each degree/clustering coefficient
+    degreedistribution[howmanyconnections[i]+1]+=1#index= given degree, element= number with that degree
+    clusco[ceil(Integer,localcoefs[i]*populationsize)+1]+=1
   end
-  for i=1:populationsize#find the percentage of the population w. each degree
-    degreedistribution[i]/=populationsize
+  popleft=populationsize
+  for i in eachindex(degreedistributiondata[1,:])
+    popleft-=degreedistribution[i]
+    degreedistribution[i]=popleft/populationsize
   end
-  for i=1:length(clusteringcoefdata[1])#find the percentage of the population w. each cc
-    clusco[i]/=populationsize
+  popleft=populationsize
+  for i in eachindex(clusteringcoefdata[1,:])
+    popleft-=clusco[i]
+    clusco[i]=popleft/populationsize
   end
-
   global degreedistributiondata[k,:]=degreedistribution[:]#add the data from this simulation to the full array of degree data
   global clusteringcoefdata[k,:]=clusco[:]#add the data from this simulation to the full array of cc data
 end
 
-#create the x-axis dimensions for both plots
+#create the graph dimensions(a probability curve)
 xaxisdd=0:length(degreedistributiondata[1,:])
 xaxiscc=0:1/(populationsize+1):1
 
-#divide the big plot into two subplots for each set of data
+#create the graph data arrays
+yaxisdd=zeros(populationsize+1)
+yaxiscc=zeros(populationsize+2)
+for j=1:populationsize
+  yaxisdd[j+1]=mean(degreedistributiondata[:,j])
+end
+for j=1:populationsize+1
+  yaxiscc[j+1]=mean(clusteringcoefdata[:,j])
+end
+
+#make two subplots (one for degree and one for clustering coefficient)
 fig,ax=subplots(nrows=2,squeeze=false)
 
-#calculate statistics (mean, median, bottom 2.5%, and top 2.5%) for the degree distribution data
-avgdegdist=mean(degreedistributiondata)
-meddegdist=median(degreedistributiondata)
-ddhigh475=percentile(vec(degreedistributiondata),97.5)
-ddlow475=percentile(vec(degreedistributiondata),2.5)
-
-#calculate statistics (mean, low 2.5%, and high 2.5%) for the clustering coefficient data
-avgcc=mean(clusteringcoefdata)
-cchigh475=percentile(vec(clusteringcoefdata),97.5)
-cclow475=percentile(vec(clusteringcoefdata),2.5)
+#find various statistical values for degree and then for clusco
+ddhigh475=zeros(populationsize+1)
+ddlow475=zeros(populationsize+1)
+cchigh475=zeros(populationsize+2)
+cclow475=zeros(populationsize+2)
+for j=1:populationsize
+  ddhigh475[j+1]=percentile(degreedistributiondata[:,j],97.5)
+  ddlow475[j+1]=percentile(degreedistributiondata[:,j],2.5)
+end
+for j=1:populationsize+1
+  cchigh475[j+1]=percentile(clusteringcoefdata[:,j],97.5)
+  cclow475[j+1]=percentile(clusteringcoefdata[:,j],2.5)
+end
 
 #graph the degree distribution data
-ax[1,1][:set_xlim]([0,32])
-ax[1,1][:plot](xaxisdd,fill(avgdegdist,101),color="black")
-ax[1,1][:plot](xaxisdd,fill(meddegdist,101),color="black")
-ax[1,1][:fill_between](x=xaxisdd,y1=avgdegdist,y2=ddhigh475,color="blue")
-ax[1,1][:fill_between](x=xaxisdd,y1=avgdegdist,y2=ddlow475,color="red")
+ax[1,1][:set_xlim]([0,35])
+ax[1,1][:plot](xaxisdd,yaxisdd,color="black")
+ax[1,1][:fill_between](x=xaxisdd,y1=yaxisdd,y2=ddhigh475,color="blue")
+ax[1,1][:fill_between](x=xaxisdd,y1=yaxisdd,y2=ddlow475,color="red")
 
 #graph the clustering coefficient data
-ax[2,1][:plot](xaxiscc,fill(avgcc,102),color="red")
-ax[2,1][:fill_between](x=xaxiscc,y1=avgcc,y2=cchigh475,color="#FF6666")
-ax[2,1][:fill_between](x=xaxiscc,y1=avgcc,y2=cclow475,color="blue")
-
-#print the time spent to run the program
-println(now()-start)
+ax[2,1][:plot](xaxiscc,yaxiscc,color="black")
+ax[2,1][:fill_between](x=xaxiscc,y1=yaxiscc,y2=cchigh475,color="blue")
+ax[2,1][:fill_between](x=xaxiscc,y1=yaxiscc,y2=cclow475,color="red")
 
 #display the graphs
 show()
