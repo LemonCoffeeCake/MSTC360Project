@@ -189,15 +189,15 @@ function playgame(ind1, ind2)#play a game between two individuals
       if(move2=="C")#if individual 2 cooperates, individual 1 gains b and individual 2 loses c
         addtopayoff(ind1,b)
         payoff2-=c
-    else#if individual 2 defected, they both lose c
+      else#if individual 2 defected, they both lose c
         addtopayoff(ind1,-c)
         payoff2-=c
       end
     end
-    if(ind1.index<=(-50)&&ind2.index<=(-50))
-        relationships[ind1.index][ind2.index]=0
-        relationships[ind2.index][ind1.index]=0
-    end
+  end
+  if(ind1.index<=(-50)&&ind2.index<=(-50))
+      relationships[ind1.index,ind2.index]=0
+      relationships[ind2.index,ind1.index]=0
   end
 end
 
