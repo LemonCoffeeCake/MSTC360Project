@@ -194,7 +194,10 @@ function playgame(ind1, ind2)#play a game between two individuals
         payoff2-=c
       end
     end
-    #add the relationship breaker here (if both payoffs are below -50)
+    if(ind1.index<=(-50)&&ind2.index<=(-50))
+        relationships[ind1.index][ind2.index]=0
+        relationships[ind2.index][ind1.index]=0
+    end
   end
 end
 
@@ -225,7 +228,7 @@ end
 
 function whoreproduces()#determines who reproduces
   moms=[]#the returned array of moms
-  max=-50#stores the highest payoff in the population
+  max=-500#stores the highest payoff in the population
   for i=1:populationsize#find the highest payoff
     if(population[i].payoff>max)
       max=population[i].payoff
@@ -270,7 +273,7 @@ function selection()#figure out who dies and who reproduces
       relationships[mothers[i],deadppl[i]]=1
     end
     for j=1:populationsize#connect the child to its mother's connections w. probability pn
-      if(deadppl[i]!=j&&relationships[mothers[i],j]==1&&rand()<=pn)
+      if(deadppl[i]!=j&&relationships[mothers[i],j]==1&&rand()<pn)
         relationships[deadppl[i],j]=1
         relationships[j,deadppl[i]]=1
       end
@@ -382,15 +385,17 @@ for j=1:populationsize+1
   cchigh475[j+1]=percentile(clusteringcoefdata[:,j],97.5)
   cclow475[j+1]=percentile(clusteringcoefdata[:,j],2.5)
 end
-print(clusteringcoefdata)
 
 #graph the degree distribution data
 ax[1,1][:set_xlim]([0,35])
+ax[1,1][:set_yticks](0:.25:1)
 ax[1,1][:plot](xaxisdd,yaxisdd,color="black")
 ax[1,1][:fill_between](x=xaxisdd,y1=yaxisdd,y2=ddhigh475,color="blue")
 ax[1,1][:fill_between](x=xaxisdd,y1=yaxisdd,y2=ddlow475,color="red")
 
 #graph the clustering coefficient data
+ax[2,1][:set_xticks](0:.25:1)
+ax[2,1][:set_yticks](0:.25:1)
 ax[2,1][:plot](xaxiscc,yaxiscc,color="black")
 ax[2,1][:fill_between](x=xaxiscc,y1=yaxiscc,y2=cchigh475,color="blue")
 ax[2,1][:fill_between](x=xaxiscc,y1=yaxiscc,y2=cclow475,color="red")
