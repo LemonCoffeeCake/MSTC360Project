@@ -25,7 +25,7 @@ end
 population=Individual[]#all the individuals in the population
 populationsize=67#the total size of the population: 67 for hyena, 34 for hyrax, 62 for dolphin, 60 for lizard
 numberoftimesteps=2000#the number of "tournaments" and reproductions per simulation
-currtimestep=1#the current time step in the iteration
+#currtimestep=1#the current time step in the iteration
 mutationrate=0.001#the likelihood an individual will mutate its strategy
 iterations=50#10#20#30#40#50 #the number of games per "tournament" #TODO check the change of reducing this
 coopcount=[0]
@@ -137,7 +137,7 @@ end
 function runsim()#just a helper function--reset/create the simulation then run the specified number of time steps
   initsim(population,relationships)
   for i=1:numberoftimesteps
-    runtimestep(stratsdata,currtimestep)
+    runtimestep(stratsdata,i)
   end
 end
 
@@ -310,11 +310,10 @@ function runtimestep(d,cts)#helper function--collects all the necessary operatio
   for i=1:STRATSSIZE#add the strategy counts to the stratsdata array
     d[i,cts+1]+=getnumwithstrat(strategies[i])
   end
-  cts+=1#move to the next timestep
 end
 
 for k=1:simulationruns#run the simulation several times
-  currtimestep=1#reset the timesteps
+  #currtimestep=1#reset the timesteps
   for i=1:(populationsize-populationsize%4)/4
     push!(population,Individual("ALLC",0,0))
   end
