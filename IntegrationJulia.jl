@@ -23,15 +23,14 @@ mutable struct Individual#the type for the individuals playing games
 end
 
 population=Individual[]#all the individuals in the population
-populationsize=67#the total size of the population: 67 for hyena, 34 for hyrax, 62 for dolphin, 60 for lizard
+populationsize=60#the total size of the population: 67 for hyena, 34 for hyrax, 62 for dolphin, 60 for lizard
 numberoftimesteps=2000#the number of "tournaments" and reproductions per simulation
 #currtimestep=1#the current time step in the iteration
 mutationrate=0.001#the likelihood an individual will mutate its strategy
-iterations=50#10#20#30#40#50 #the number of games per "tournament" #TODO check the change of reducing this
+iterations=50#10#20#30#40#50 #the number of games per "tournament"
 coopcount=[0]
 
-#TODO track frequency of each strategy
-strategies=["ALLC", "ALLD", "TIT4TAT", "CAUTIOUSTIT"]# "ALTERNATE", "RANDOM"]#all of the possible strategies
+strategies=["ALLC", "ALLD", "TIT4TAT"]#"CAUTIOUSTIT"]# "ALTERNATE", "RANDOM"]#all of the possible strategies
 STRATSSIZE=length(strategies)#the size of the strategy array--capitalized because it's constant
 
 stratsdata=zeros(STRATSSIZE, numberoftimesteps+1)#an array of how many people have strategy i at time step j-1--added to on every simulation and then averaged after they're all done
@@ -43,8 +42,8 @@ howmanydie=10#how many individuals die in each time step
 
 #TODO vary these probabilities (based on strategy?)
 pb=1#the likelihood an individual will have a social link with its mother
-pn=0.85#the likelihood an individual will have a social link with its mother's connections
-pr=0.017#the likelihood an individual will have a social link with another individual not connected to its mother
+pn=0.51#the likelihood an individual will have a social link with its mother's connections
+pr=0.007#the likelihood an individual will have a social link with another individual not connected to its mother
 relationships=zeros(Integer,populationsize,populationsize)#an arrray of the relationships between all individuals--individuals i and j aren't linked if relationships[i,j]=0 and are if relationships[i,j]=1--relationships[i,j] always equals relationships[j,i]
 
 function computemove(self::Individual, opponent::Individual, iter::Integer)#determines an individual's move in one game
@@ -314,22 +313,22 @@ end
 
 for k=1:simulationruns#run the simulation several times
   #currtimestep=1#reset the timesteps
-  for i=1:(populationsize-populationsize%4)/4
+  for i=1:(populationsize-populationsize%3)/3
     push!(population,Individual("ALLC",0,0))
   end
-  for i=(populationsize-populationsize%4)/4+1:(populationsize-populationsize%4)/2
+  for i=(populationsize-populationsize%3)/3+1:(2*(populationsize-populationsize%3))/3
     push!(population,Individual("ALLD",0,0))
   end
-  for i=(populationsize-populationsize%4)/2+1:(3*(populationsize-populationsize%4))/4
+  for i=(2*(populationsize-populationsize%3))/3+1:populationsize-populationsize%3
     push!(population,Individual("TIT4TAT",0,0))
   end
-  for i=(3*(populationsize-populationsize%4))/4+1:populationsize-populationsize%4
+  #=for i=(3*(populationsize-populationsize%4))/4+1:populationsize-populationsize%4
     push!(population,Individual("CAUTIOUSTIT",0,0))
+  end=#
+  for i=(populationsize-populationsize%3+1):populationsize
+    push!(population,Individual(strategies[i%3],0,0))
   end
-  for i=(populationsize-populationsize%4+1):populationsize
-    push!(population,Individual(strategies[i%4],0,0))
-  end
-  for i=1:4
+  for i=1:STRATSSIZE
     stratsdata[i,1]+=getnumwithstrat(strategies[i])
   end
   relationships=zeros(populationsize,populationsize)
@@ -390,7 +389,7 @@ ax[1,1][:set_xticks](0:200:2000)
 ax[1,1][:plot](xaxisstrats,avgstratrate[1,:],color="black")
 ax[1,1][:plot](xaxisstrats,avgstratrate[2,:],color="blue")
 ax[1,1][:plot](xaxisstrats,avgstratrate[3,:],color="red")
-ax[1,1][:plot](xaxisstrats,avgstratrate[4,:],color="green")
+#ax[1,1][:plot](xaxisstrats,avgstratrate[4,:],color="green")
 show()
 
 #I commented the below out because it outputs data in a different way than is useful now
