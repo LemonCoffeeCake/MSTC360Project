@@ -1,0 +1,7 @@
+KEY FOR GRAPHS
+X-axis: time step
+Y-axis: average number of individuals with this strategy at time step t (avg. of 500 replicates)
+Black: Always Cooperate
+Blue: Always Defect
+Red: Tit-for-tat
+Green (when applicable): Cautious Tit-for-tat (like tit-for-tat, but starts by defecting)
