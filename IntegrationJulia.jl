@@ -23,7 +23,7 @@ mutable struct Individual#the type for the individuals playing games
 end
 
 population=Individual[]#all the individuals in the population
-populationsize=60#the total size of the population: 67 for hyena, 34 for hyrax, 62 for dolphin, 60 for lizard
+populationsize=67#the total size of the population: 67 for hyena, 34 for hyrax, 62 for dolphin, 60 for lizard
 numberoftimesteps=2000#the number of "tournaments" and reproductions per simulation
 #currtimestep=1#the current time step in the iteration
 mutationrate=0.001#the likelihood an individual will mutate its strategy
@@ -40,10 +40,10 @@ degreedistributiondata=zeros(simulationruns, populationsize)#an array storing th
 clusteringcoefdata=zeros(simulationruns,populationsize+1)#same as above, but for clustering coefficients
 howmanydie=10#how many individuals die in each time step
 
-#TODO vary these probabilities (based on strategy?)
 pb=1#the likelihood an individual will have a social link with its mother
-pn=0.51#the likelihood an individual will have a social link with its mother's connections
-pr=0.007#the likelihood an individual will have a social link with another individual not connected to its mother
+#TODO test effect on cooperation vs. defection going to dominance of varying pn/pr
+pn=0.85#the likelihood an individual will have a social link with its mother's connections
+pr=0.017#the likelihood an individual will have a social link with another individual not connected to its mother
 relationships=zeros(Integer,populationsize,populationsize)#an arrray of the relationships between all individuals--individuals i and j aren't linked if relationships[i,j]=0 and are if relationships[i,j]=1--relationships[i,j] always equals relationships[j,i]
 
 function computemove(self::Individual, opponent::Individual, iter::Integer)#determines an individual's move in one game
@@ -313,7 +313,7 @@ end
 
 for k=1:simulationruns#run the simulation several times
   #currtimestep=1#reset the timesteps
-  for i=1:(populationsize-populationsize%3)/3
+  #=for i=1:(populationsize-populationsize%3)/3
     push!(population,Individual("ALLC",0,0))
   end
   for i=(populationsize-populationsize%3)/3+1:(2*(populationsize-populationsize%3))/3
@@ -327,10 +327,19 @@ for k=1:simulationruns#run the simulation several times
   end=#
   for i=(populationsize-populationsize%3+1):populationsize
     push!(population,Individual(strategies[i%3],0,0))
+  end=#
+  for i=1:50
+    push!(population,Individual("ALLD",0,0))
+  end
+  for i=51:STRATSSIZE
+    push!(population,Individual("TIT4TAT",0,0))
   end
   for i=1:STRATSSIZE
     stratsdata[i,1]+=getnumwithstrat(strategies[i])
   end
+  #=for i=1:STRATSSIZE
+    println(getnumwithstrat(strategies[i]))
+  end=#
   relationships=zeros(populationsize,populationsize)
   runsim()#run an entire simulation
 
@@ -368,7 +377,7 @@ for k=1:simulationruns#run the simulation several times
 end
 
 #This array holds the average frequency of each strategy at any time step across all runs
-avgstratrate=stratsdata./numberoftimesteps
+avgstratrate=stratsdata./simulationruns
 #create the graph dimensions(a probability curve)
 xaxisstrats=0:numberoftimesteps
 
